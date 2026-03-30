@@ -172,33 +172,111 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         qApp->quit();
         return;
     }
-    else if (event->key() == Qt::Key_Up)
+
+    setKeyState(event->key(), true);
+    if (!event->isAutoRepeat())
     {
-        onPressUp();
+        processInput();
+        redrawView();
     }
-    else if (event->key() == Qt::Key_Down)
-    {
-        onPressDown();
-    }
-    else if (event->key() == Qt::Key_Left)
-    {
-        onPressLeft();
-    }
-    else if (event->key() == Qt::Key_Right)
-    {
-        onPressRight();
-    }
-    else if (event->key() == Qt::Key_Space)
-    {
-        onPressShoot();
-    }
+
     QMainWindow::keyPressEvent(event);
+}
+
+void MainWindow::keyReleaseEvent(QKeyEvent* event)
+{
+    setKeyState(event->key(), false);
+    if (!event->isAutoRepeat())
+    {
+        processInput();
+        redrawView();
+    }
+
+    QMainWindow::keyReleaseEvent(event);
 }
 
 void MainWindow::update()
 {
+    processInput();
     engine_.update();
     redrawView();
+}
+
+void MainWindow::processInput()
+{
+    updateMovement();
+    if (isShootPressed_)
+    {
+        engine_.playerShoots();
+    }
+}
+
+void MainWindow::updateMovement()
+{
+    if (isUpPressed_ && isLeftPressed_)
+    {
+        engine_.movePlayerDownLeft();
+        return;
+    }
+    if (isUpPressed_ && isRightPressed_)
+    {
+        engine_.movePlayerDownRight();
+        return;
+    }
+    if (isDownPressed_ && isLeftPressed_)
+    {
+        engine_.movePlayerUpLeft();
+        return;
+    }
+    if (isDownPressed_ && isRightPressed_)
+    {
+        engine_.movePlayerUpRight();
+        return;
+    }
+    if (isUpPressed_)
+    {
+        engine_.movePlayerDown();
+        return;
+    }
+    if (isDownPressed_)
+    {
+        engine_.movePlayerUp();
+        return;
+    }
+    if (isLeftPressed_)
+    {
+        engine_.movePlayerLeft();
+        return;
+    }
+    if (isRightPressed_)
+    {
+        engine_.movePlayerRight();
+        return;
+    }
+}
+
+void MainWindow::setKeyState(int key, bool isPressed)
+{
+    switch (key)
+    {
+    case Qt::Key_Up:
+        isUpPressed_ = isPressed;
+        break;
+    case Qt::Key_Down:
+        isDownPressed_ = isPressed;
+        break;
+    case Qt::Key_Left:
+        isLeftPressed_ = isPressed;
+        break;
+    case Qt::Key_Right:
+        isRightPressed_ = isPressed;
+        break;
+    case Qt::Key_Space:
+        isShootPressed_ = isPressed;
+        break;
+    default:
+        break;
+    }
 }
 
 QPixmap MainWindow::getRotatedPlayerImage() const

@@ -25,6 +25,7 @@ public:
 
 public slots:
     void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
 
     void onPressShoot();
     void onPressUp();
@@ -35,6 +36,9 @@ public slots:
     void update();
 
 private:  // methods:
+    void processInput();
+    void updateMovement();
+    void setKeyState(int key, bool isPressed);
     void drawPlayer(QPainter& painter);
     void drawShoots(QPainter& painter);
     void drawEnemies(QPainter& painter);
@@ -58,5 +62,11 @@ private:  // fields:
     QTimer timer_;
 
     QMediaPlayer player_;
+
+    bool isUpPressed_ = false;
+    bool isDownPressed_ = false;
+    bool isLeftPressed_ = false;
+    bool isRightPressed_ = false;
+    bool isShootPressed_ = false;
 };
 #endif // MAINWINDOW_H
