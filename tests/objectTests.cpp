@@ -2,7 +2,7 @@
 #include <type_traits>
 #include <gtest/gtest.h>
 
-#include "../object.h"
+#include "game/core/object.h"
 
 using namespace std;
 using namespace ::testing;

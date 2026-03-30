@@ -1,6 +1,4 @@
 ### CMake ###
-generated/
-generated-gui/
 build/
 doxygen/
 
@@ -9,3 +7,6 @@ temp/
 
 ### IDEE
 .vscode
+
+### Runtime-fetched test deps ###
+tests/lib/

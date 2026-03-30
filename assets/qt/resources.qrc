@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="background.png">../images/background/background.png</file>
+        <file alias="player.png">../images/player/player.png</file>
+        <file alias="bullet.png">../images/bullet/bullet.png</file>
+        <file alias="enemy.png">../images/enemy/enemy.png</file>
+        <file alias="music.mp3">../audio/music.mp3</file>
+        <file alias="musicAfterLoosing.mp3">../audio/musicAfterLoosing.mp3</file>
+    </qresource>
+</RCC>

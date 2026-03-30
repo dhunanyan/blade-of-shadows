@@ -2,7 +2,7 @@
 set -eu
 set -o pipefail 2>/dev/null || true
 
-BUILD_DIR="${1:-generated}"
+BUILD_DIR="${1:-build}"
 
 CLR_RESET='\033[0m'
 CLR_BOLD='\033[1m'
@@ -17,10 +17,21 @@ log_err()  { printf '%b\n' "${CLR_RED}${CLR_BOLD}[ERR ]${CLR_RESET} $*"; }
 on_exit() {
   rc=$?
   if [ "${rc}" -ne 0 ]; then
-    log_err "Komenda nie powiodła się."
+    log_err "Command failed."
   fi
 }
 trap on_exit EXIT
 
-log_ok "Uruchamianie ${CLR_BLUE}./${BUILD_DIR}/bin/lab3Inheritance_forStudents${CLR_RESET}"
-"./${BUILD_DIR}/bin/lab3Inheritance_forStudents"
+GAME_BIN="./${BUILD_DIR}/bin/game"
+GAME_APP_BIN="./${BUILD_DIR}/bin/game.app/Contents/MacOS/game"
+
+if [ -x "${GAME_BIN}" ]; then
+  log_ok "Launching GUI ${CLR_BLUE}${GAME_BIN}${CLR_RESET}"
+  "${GAME_BIN}"
+elif [ -x "${GAME_APP_BIN}" ]; then
+  log_ok "Launching GUI ${CLR_BLUE}${GAME_APP_BIN}${CLR_RESET}"
+  "${GAME_APP_BIN}"
+else
+  log_err "Could not find ${GAME_BIN} or ${GAME_APP_BIN}. Run ./scripts/build.sh ${BUILD_DIR} first."
+  exit 1
+fi

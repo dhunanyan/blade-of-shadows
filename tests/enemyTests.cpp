@@ -2,7 +2,7 @@
 #include <type_traits>
 #include <gtest/gtest.h>
 
-#include "../enemy.h"
+#include "game/core/enemy.h"
 
 
 using namespace std;

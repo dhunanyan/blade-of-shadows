@@ -2,7 +2,7 @@
 #include <type_traits>
 #include <gtest/gtest.h>
 
-#include "../player.h"
+#include "game/core/player.h"
 
 
 using namespace std;

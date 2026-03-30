@@ -2,10 +2,10 @@
 #include <type_traits>
 #include <gtest/gtest.h>
 
-#include "../engine.h"
-#include "../position.h"
-#include "../bullet.h"
-#include "../enemy.h"
+#include "game/core/engine.h"
+#include "game/core/position.h"
+#include "game/core/bullet.h"
+#include "game/core/enemy.h"
 
 using namespace std;
 using namespace ::testing;

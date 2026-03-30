@@ -2,7 +2,7 @@
 #include <type_traits>
 #include <gtest/gtest.h>
 
-#include "../bullet.h"
+#include "game/core/bullet.h"
 
 
 using namespace std;
