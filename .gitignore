@@ -1,0 +1,11 @@
+### CMake ###
+generated/
+generated-gui/
+build/
+doxygen/
+
+### Temporary playgrounds ###
+temp/
+
+### IDEE
+.vscode

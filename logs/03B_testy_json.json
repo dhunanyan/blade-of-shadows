@@ -1,0 +1,216 @@
+{
+  "tests": 15,
+  "failures": 0,
+  "disabled": 0,
+  "errors": 0,
+  "timestamp": "2026-03-17T19:50:46Z",
+  "time": "0.002s",
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "BulletTester",
+      "tests": 2,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-03-17T19:50:46Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "shootIsObject",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/bulletTests.cpp",
+          "line": 16,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "BulletTester"
+        },
+        {
+          "name": "shootHasDirectionAndPosition",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/bulletTests.cpp",
+          "line": 30,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "BulletTester"
+        }
+      ]
+    },
+    {
+      "name": "EnemyTester",
+      "tests": 1,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-03-17T19:50:46Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "enemyHasLimitedLife",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/enemyTests.cpp",
+          "line": 16,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "EnemyTester"
+        }
+      ]
+    },
+    {
+      "name": "EngineTester",
+      "tests": 5,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-03-17T19:50:46Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "engineConstructedWithWidthAndHeight",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/engineTests.cpp",
+          "line": 26,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "EngineTester"
+        },
+        {
+          "name": "engineHasGettersToGetInformationAboutPlayer",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/engineTests.cpp",
+          "line": 38,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "EngineTester"
+        },
+        {
+          "name": "engineCanMovePlayer",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/engineTests.cpp",
+          "line": 55,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "EngineTester"
+        },
+        {
+          "name": "engineHandlePlayerShooting",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/engineTests.cpp",
+          "line": 78,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "EngineTester"
+        },
+        {
+          "name": "engineHandlesEnemies",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/engineTests.cpp",
+          "line": 111,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "EngineTester"
+        }
+      ]
+    },
+    {
+      "name": "ObjectTester",
+      "tests": 3,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-03-17T19:50:46Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "constructorWithTwoArguments",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/objectTests.cpp",
+          "line": 15,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "ObjectTester"
+        },
+        {
+          "name": "setPosition",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/objectTests.cpp",
+          "line": 31,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "ObjectTester"
+        },
+        {
+          "name": "movingObject",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/objectTests.cpp",
+          "line": 51,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "ObjectTester"
+        }
+      ]
+    },
+    {
+      "name": "PlayerTester",
+      "tests": 4,
+      "failures": 0,
+      "disabled": 0,
+      "errors": 0,
+      "timestamp": "2026-03-17T19:50:46Z",
+      "time": "0s",
+      "testsuite": [
+        {
+          "name": "playerIsObject",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/playerTests.cpp",
+          "line": 16,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "PlayerTester"
+        },
+        {
+          "name": "playerCanMoveLikeObject",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/playerTests.cpp",
+          "line": 31,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "PlayerTester"
+        },
+        {
+          "name": "playerHasDirection",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/playerTests.cpp",
+          "line": 49,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "PlayerTester"
+        },
+        {
+          "name": "playerCanDie",
+          "file": "\/tmp\/tmp37it6wef\/student\/tests\/playerTests.cpp",
+          "line": 66,
+          "status": "RUN",
+          "result": "COMPLETED",
+          "timestamp": "2026-03-17T19:50:46Z",
+          "time": "0s",
+          "classname": "PlayerTester"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[  7%] Building CXX object tests/lib/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o
+[ 14%] Linking CXX static library ../../../lib/libgtest.a
+[ 14%] Built target gtest
+[ 21%] Building CXX object tests/lib/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o
+[ 28%] Linking CXX static library ../../../lib/libgtest_main.a
+[ 28%] Built target gtest_main
+[ 35%] Building CXX object tests/CMakeFiles/tests.dir/enemyTests.cpp.o
+[ 42%] Building CXX object tests/CMakeFiles/tests.dir/objectTests.cpp.o
+[ 50%] Building CXX object tests/CMakeFiles/tests.dir/engineTests.cpp.o
+[ 57%] Building CXX object tests/CMakeFiles/tests.dir/bulletTests.cpp.o
+[ 71%] Building CXX object tests/CMakeFiles/tests.dir/playerTests.cpp.o
+[ 71%] Building CXX object tests/CMakeFiles/tests.dir/__/engine.cpp.o
+[ 78%] Building CXX object tests/CMakeFiles/tests.dir/__/object.cpp.o
+[ 85%] Building CXX object tests/CMakeFiles/tests.dir/__/enemy.cpp.o
+[ 92%] Building CXX object tests/CMakeFiles/tests.dir/__/stage.cpp.o
+[100%] Linking CXX executable ../bin/tests
+[100%] Built target tests

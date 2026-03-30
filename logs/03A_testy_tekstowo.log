@@ -1,0 +1,51 @@
+Running main() from /tmp/tmp37it6wef/student/tests/lib/googletest/src/gtest_main.cc
+[==========] Running 15 tests from 5 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from BulletTester
+[ RUN      ] BulletTester.shootIsObject
+[       OK ] BulletTester.shootIsObject (0 ms)
+[ RUN      ] BulletTester.shootHasDirectionAndPosition
+[       OK ] BulletTester.shootHasDirectionAndPosition (0 ms)
+[----------] 2 tests from BulletTester (0 ms total)
+
+[----------] 1 test from EnemyTester
+[ RUN      ] EnemyTester.enemyHasLimitedLife
+[       OK ] EnemyTester.enemyHasLimitedLife (0 ms)
+[----------] 1 test from EnemyTester (0 ms total)
+
+[----------] 5 tests from EngineTester
+[ RUN      ] EngineTester.engineConstructedWithWidthAndHeight
+[       OK ] EngineTester.engineConstructedWithWidthAndHeight (0 ms)
+[ RUN      ] EngineTester.engineHasGettersToGetInformationAboutPlayer
+[       OK ] EngineTester.engineHasGettersToGetInformationAboutPlayer (0 ms)
+[ RUN      ] EngineTester.engineCanMovePlayer
+[       OK ] EngineTester.engineCanMovePlayer (0 ms)
+[ RUN      ] EngineTester.engineHandlePlayerShooting
+[       OK ] EngineTester.engineHandlePlayerShooting (0 ms)
+[ RUN      ] EngineTester.engineHandlesEnemies
+[       OK ] EngineTester.engineHandlesEnemies (0 ms)
+[----------] 5 tests from EngineTester (0 ms total)
+
+[----------] 3 tests from ObjectTester
+[ RUN      ] ObjectTester.constructorWithTwoArguments
+[       OK ] ObjectTester.constructorWithTwoArguments (0 ms)
+[ RUN      ] ObjectTester.setPosition
+[       OK ] ObjectTester.setPosition (0 ms)
+[ RUN      ] ObjectTester.movingObject
+[       OK ] ObjectTester.movingObject (0 ms)
+[----------] 3 tests from ObjectTester (0 ms total)
+
+[----------] 4 tests from PlayerTester
+[ RUN      ] PlayerTester.playerIsObject
+[       OK ] PlayerTester.playerIsObject (0 ms)
+[ RUN      ] PlayerTester.playerCanMoveLikeObject
+[       OK ] PlayerTester.playerCanMoveLikeObject (0 ms)
+[ RUN      ] PlayerTester.playerHasDirection
+[       OK ] PlayerTester.playerHasDirection (0 ms)
+[ RUN      ] PlayerTester.playerCanDie
+[       OK ] PlayerTester.playerCanDie (0 ms)
+[----------] 4 tests from PlayerTester (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 15 tests from 5 test suites ran. (2 ms total)
+[  PASSED  ] 15 tests.

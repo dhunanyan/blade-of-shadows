@@ -1,0 +1,40 @@
+workflow:
+  rules:
+    - if: '$CI_PROJECT_PATH != "agh-courses/25/podstawy-programowania-2-2026/pp2-lab1-printing"'
+      when: always
+    - when: never
+
+image: ubuntu:24.04
+stages:
+  - build
+  - test
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - generated/
+
+before_script:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update -qq
+  - apt-get install -y -qq cmake g++ make valgrind libgtest-dev python3
+
+build:
+  stage: build
+  script:
+    - bash ./scripts/build.sh
+  artifacts:
+    paths:
+      - generated/
+    expire_in: 1 hour
+  allow_failure: false
+
+test:
+  stage: test
+  needs:
+    - job: build
+      artifacts: true
+  script:
+    - ls -lah generated/bin
+    - bash ./scripts/test.sh
+  allow_failure: false
