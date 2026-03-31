@@ -23,6 +23,8 @@ if (DEFINED QT_PACKAGE_PREFIX)
         gameMain.cpp
         mainwindow.h
         mainwindow.cpp
+        tilemapper.h
+        tilemapper.cpp
         mainwindow.ui
         ${CMAKE_SOURCE_DIR}/assets/qt/resources.qrc
     )

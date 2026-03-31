@@ -16,12 +16,16 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui_(new Ui::MainWindow),
-      engine_(38, 25),
-      backgroundOrginal_(QString::fromUtf8(":/background_layer_1.png")),
+      engine_(60, 25),
+      backgroundLayer1_(QString::fromUtf8(":/background_layer_1.png")),
+      backgroundLayer2_(QString::fromUtf8(":/background_layer_2.png")),
+      backgroundLayer3_(QString::fromUtf8(":/background_layer_3.png")),
       bulletOriginal_(QString::fromUtf8(":/bullet.png")),
       enemyOriginal_(QString::fromUtf8(":/enemy.png"))
 {
     ui_->setupUi(this);
+    ui_->background->setScaledContents(false);
+    tileMapper_.loadFromJsonResource(QString::fromUtf8(":/levels/sample_level.json"));
     connect(&timer_, &QTimer::timeout, this, &MainWindow::update);
     timer_.start(/*msec=*/100);
 
@@ -80,28 +84,41 @@ MainWindow::~MainWindow()
 
 void MainWindow::redrawView()
 {
-    QSize targetSize = ui_->background->size();
-    if (targetSize.isEmpty())
-    {
-        targetSize = backgroundOrginal_.size();
-    }
+    const QSize targetSize(
+        static_cast<int>(engine_.stageWidthCells()) * tileSizePx_,
+        static_cast<int>(engine_.stageHeightCells()) * tileSizePx_);
 
-    QPixmap newBackground = backgroundOrginal_.scaled(
+    QPixmap composedBackground = backgroundLayer1_.scaled(
         targetSize,
         Qt::IgnoreAspectRatio,
         Qt::SmoothTransformation
     );
-    QPainter painter(&newBackground);
+    QPixmap backgroundLayer2 = backgroundLayer2_.scaled(
+        targetSize,
+        Qt::IgnoreAspectRatio,
+        Qt::SmoothTransformation
+    );
+    QPixmap backgroundLayer3 = backgroundLayer3_.scaled(
+        targetSize,
+        Qt::IgnoreAspectRatio,
+        Qt::SmoothTransformation
+    );
+
+    QPainter painter(&composedBackground);
+    painter.drawPixmap(0, 0, backgroundLayer2);
+    painter.drawPixmap(0, 0, backgroundLayer3);
+
     if (!engine_.isPlayerAlive())
     {
-        painter.drawRect(newBackground.rect());
+        painter.drawRect(composedBackground.rect());
     }
 
+    tileMapper_.render(painter, tileSizePx_);
     drawPlayer(painter);
     drawShoots(painter);
     drawEnemies(painter);
 
-    ui_->background->setPixmap(newBackground);
+    ui_->background->setPixmap(composedBackground);
 }
 
 void MainWindow::drawPlayer(QPainter& painter)
@@ -203,12 +220,8 @@ std::pair<QPoint,QPoint> MainWindow::calculatePlayerPosition() const
 
 QPoint MainWindow::position2QPoint(Position position) const
 {
-    const int renderWidth = std::max(1, ui_->background->width());
-    const int renderHeight = std::max(1, ui_->background->height());
-
-    auto newX = position.x_ * renderWidth / engine_.stageWidthCells();
-    auto newY = position.y_ * renderHeight / engine_.stageHeightCells();
-
+    const int newX = static_cast<int>(position.x_) * tileSizePx_;
+    const int newY = static_cast<int>(position.y_) * tileSizePx_;
     return QPoint(newX, newY);
 }
 std::pair<QPoint,QPoint> MainWindow::position2PairOfQPoints(Position position) const

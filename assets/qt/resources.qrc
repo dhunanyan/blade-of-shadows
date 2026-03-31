@@ -3,6 +3,8 @@
         <file alias="background_layer_1.png">../images/background/background_layer_1.png</file>
         <file alias="background_layer_2.png">../images/background/background_layer_2.png</file>
         <file alias="background_layer_3.png">../images/background/background_layer_3.png</file>
+        <file alias="tiles/tileset.png">../images/tiles/tileset.png</file>
+        <file alias="levels/sample_level.json">../levels/sample_level.json</file>
         <file alias="player/idle/01.png">../images/player/idle/01.png</file>
         <file alias="player/idle/02.png">../images/player/idle/02.png</file>
         <file alias="player/idle/03.png">../images/player/idle/03.png</file>

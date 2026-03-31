@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QMediaPlayer>
 #include "game/core/engine.h"
+#include "tilemapper.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -36,7 +37,7 @@ public slots:
 
     void update();
 
-private:  // methods:
+private:
     enum class PlayerState
     {
         Idle,
@@ -69,6 +70,7 @@ private:  // methods:
 private:  // fields:
     Ui::MainWindow *ui_;
 
+    TileMapper tileMapper_;
     Engine engine_;
 
     std::vector<QPixmap> playerAttackFrames_;
@@ -93,13 +95,16 @@ private:  // fields:
     double playerRunFrameAccumulator_ = 0.0;
     double playerRunFramesPerTick_ = 0.9;
     
-    QPixmap backgroundOrginal_;
+    QPixmap backgroundLayer1_;
+    QPixmap backgroundLayer2_;
+    QPixmap backgroundLayer3_;
     QPixmap bulletOriginal_;
     QPixmap enemyOriginal_;
 
     QTimer timer_;
 
     QMediaPlayer player_;
+    static constexpr int tileSizePx_ = 24;
     const int playerScale_ = 3;
 
     bool isUpPressed_ = false;
