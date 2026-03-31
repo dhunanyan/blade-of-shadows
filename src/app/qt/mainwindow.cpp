@@ -17,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui_(new Ui::MainWindow),
       engine_(38, 25),
-      backgroundOrginal_(QString::fromUtf8(":/background.png")),
+      backgroundOrginal_(QString::fromUtf8(":/background_layer_1.png")),
       bulletOriginal_(QString::fromUtf8(":/bullet.png")),
       enemyOriginal_(QString::fromUtf8(":/enemy.png"))
 {
@@ -36,6 +36,8 @@ MainWindow::MainWindow(QWidget *parent)
         QString::fromUtf8(":/player/idle/02.png"),
         QString::fromUtf8(":/player/idle/03.png"),
         QString::fromUtf8(":/player/idle/04.png"),
+        QString::fromUtf8(":/player/idle/05.png"),
+        QString::fromUtf8(":/player/idle/06.png"),
     });
 
     playerRunFrames_ = loadFrames({
@@ -56,8 +58,6 @@ MainWindow::MainWindow(QWidget *parent)
         QString::fromUtf8(":/player/attack/04.png"),
         QString::fromUtf8(":/player/attack/05.png"),
         QString::fromUtf8(":/player/attack/06.png"),
-        QString::fromUtf8(":/player/attack/07.png"),
-        QString::fromUtf8(":/player/attack/08.png"),
     });
 
     playerDamageFrames_ = loadFrames({
@@ -65,6 +65,10 @@ MainWindow::MainWindow(QWidget *parent)
         QString::fromUtf8(":/player/damage/02.png"),
         QString::fromUtf8(":/player/damage/03.png"),
         QString::fromUtf8(":/player/damage/04.png"),
+        QString::fromUtf8(":/player/damage/05.png"),
+        QString::fromUtf8(":/player/damage/06.png"),
+        QString::fromUtf8(":/player/damage/07.png"),
+        QString::fromUtf8(":/player/damage/08.png"),
     });
 }
 

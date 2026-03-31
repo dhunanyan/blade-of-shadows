@@ -100,7 +100,7 @@ private:  // fields:
     QTimer timer_;
 
     QMediaPlayer player_;
-    const int playerScale_ = 2;
+    const int playerScale_ = 3;
 
     bool isUpPressed_ = false;
     bool isDownPressed_ = false;
