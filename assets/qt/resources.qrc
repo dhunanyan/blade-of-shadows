@@ -1,7 +1,10 @@
 <RCC>
     <qresource prefix="/">
         <file alias="background.png">../images/background/background.png</file>
-        <file alias="player.png">../images/player/player.png</file>
+        <file alias="player_attack.png">../images/player/player_attack.png</file>
+        <file alias="player_damage.png">../images/player/player_damage.png</file>
+        <file alias="player_idle.png">../images/player/player_idle.png</file>
+        <file alias="player_run.png">../images/player/player_run.png</file>
         <file alias="bullet.png">../images/bullet/bullet.png</file>
         <file alias="enemy.png">../images/enemy/enemy.png</file>
         <file alias="music.mp3">../audio/music.mp3</file>

@@ -36,9 +36,20 @@ public slots:
     void update();
 
 private:  // methods:
+    enum class PlayerState
+    {
+        Idle,
+        Run,
+        Attack,
+        Damage
+    };
+
     void processInput();
     void updateMovement();
     void setKeyState(int key, bool isPressed);
+    PlayerState resolvePlayerState() const;
+    void setPlayerState(PlayerState nextState);
+    void updatePlayerAnimationFrame();
     void drawPlayer(QPainter& painter);
     void drawShoots(QPainter& painter);
     void drawEnemies(QPainter& painter);
@@ -48,13 +59,50 @@ private:  // methods:
     QPoint position2QPoint(Position position) const;
     std::pair<QPoint,QPoint> position2PairOfQPoints(Position position) const;
     void drawLifeBarAboveEnemy(QPainter &painter, const Enemy &enemy);
-
+    QPixmap getCurrentPlayerIdleFrame() const;
+    QPixmap getCurrentPlayerDamageFrame() const;
+    QPixmap getCurrentPlayerAttackFrame() const;
+    QPixmap getCurrentPlayerRunFrame() const;
+    QPixmap getCurrentPlayerFrame() const;
 private:  // fields:
     Ui::MainWindow *ui_;
 
     Engine engine_;
 
-    QPixmap playerPixmapOrginal_;
+    QPixmap playerAttackSheet_;
+    int playerAttackFrameIndex_ = 0;
+    int playerAttackFrameCount_ = 7;
+    int playerAttackFrameWidth_ = 96;
+    int playerAttackFrameHeight_ = 96;
+    double playerAttackFrameAccumulator_ = 0.0;
+    double playerAttackFramesPerTick_ = 2;
+    bool attackRequested_ = false;
+    bool attackInProgress_ = false;
+
+    QPixmap playerDamageSheet_;
+    int playerDamageFrameIndex_ = 0;
+    int playerDamageFrameCount_ = 4;
+    int playerDamageFrameWidth_ = 96;
+    int playerDamageFrameHeight_ = 96;
+    double playerDamageFrameAccumulator_ = 0.0;
+    double playerDamageFramesPerTick_ = 1.2;
+
+    QPixmap playerIdleSheet_;
+    int playerIdleFrameIndex_ = 0;
+    int playerIdleFrameCount_ = 10;
+    int playerIdleFrameWidth_ = 96;
+    int playerIdleFrameHeight_ = 96;
+    double playerIdleFrameAccumulator_ = 0.0;
+    double playerIdleFramesPerTick_ = 0.4;
+
+    QPixmap playerRunSheet_;
+    int playerRunFrameIndex_ = 0;
+    int playerRunFrameCount_ = 16;
+    int playerRunFrameWidth_ = 96;
+    int playerRunFrameHeight_ = 96;
+    double playerRunFrameAccumulator_ = 0.0;
+    double playerRunFramesPerTick_ = 0.9;
+    
     QPixmap backgroundOrginal_;
     QPixmap bulletOriginal_;
     QPixmap enemyOriginal_;
@@ -68,5 +116,7 @@ private:  // fields:
     bool isLeftPressed_ = false;
     bool isRightPressed_ = false;
     bool isShootPressed_ = false;
+
+    PlayerState currentPlayerState_ = PlayerState::Idle;
 };
 #endif // MAINWINDOW_H

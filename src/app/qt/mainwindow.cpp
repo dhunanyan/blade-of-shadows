@@ -17,7 +17,10 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui_(new Ui::MainWindow),
       engine_(38, 25),
-      playerPixmapOrginal_(QString::fromUtf8(":/player.png")),
+      playerAttackSheet_(QString::fromUtf8(":/player_attack.png")),
+      playerDamageSheet_(QString::fromUtf8(":/player_damage.png")),
+      playerIdleSheet_(QString::fromUtf8(":/player_idle.png")),
+      playerRunSheet_(QString::fromUtf8(":/player_run.png")),
       backgroundOrginal_(QString::fromUtf8(":/background.png")),
       bulletOriginal_(QString::fromUtf8(":/bullet.png")),
       enemyOriginal_(QString::fromUtf8(":/enemy.png"))
@@ -68,15 +71,25 @@ void MainWindow::redrawView()
 
 void MainWindow::drawPlayer(QPainter& painter)
 {
-    if (engine_.isPlayerAlive())
-    {
-        auto playerPixmap = getRotatedPlayerImage();
-        auto [playerPositionTopLeft, playerPositionBottomRight] = calculatePlayerPosition();
-        QRect playerPosition(playerPositionTopLeft, playerPositionBottomRight);
-        painter.drawPixmap(playerPosition, playerPixmap);
-    }
-}
+  if (!engine_.isPlayerAlive()) return;
 
+  QPixmap frame = getRotatedPlayerImage();
+  if (frame.isNull()) return;
+
+
+  auto [topLeft, bottomRight] = calculatePlayerPosition();
+  const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
+
+  const int scale = 5;
+  const QSize targetSize(cellSize.x() * scale, cellSize.y() * scale);
+
+  QPoint drawTopLeft = topLeft - QPoint(
+    (targetSize.width() - cellSize.x()) / 2,
+    (targetSize.height() - cellSize.y()) / 2
+  );
+  QRect targetRect(drawTopLeft, targetSize);
+  painter.drawPixmap(targetRect, frame);
+}
 
 void MainWindow::drawShoots(QPainter& painter)
 {
@@ -115,6 +128,38 @@ void MainWindow::drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy)
 
     painter.setBrush(Qt::red);
     painter.drawRect(QRect{enemyPositionTopLeft, lifeBarPositionBottomRight});
+}
+
+QPixmap MainWindow::getCurrentPlayerAttackFrame() const
+{
+    if (playerAttackSheet_.isNull() || playerAttackFrameCount_ <= 0) return QPixmap();
+
+    const int frameX = playerAttackFrameIndex_ * playerAttackFrameWidth_;
+    return playerAttackSheet_.copy(frameX, 0, playerAttackFrameWidth_, playerAttackFrameHeight_);
+}
+
+QPixmap MainWindow::getCurrentPlayerDamageFrame() const
+{
+    if (playerDamageSheet_.isNull() || playerDamageFrameCount_ <= 0) return QPixmap();
+
+    const int frameX = playerDamageFrameIndex_ * playerDamageFrameWidth_;
+    return playerDamageSheet_.copy(frameX, 0, playerDamageFrameWidth_, playerDamageFrameHeight_);
+}
+
+QPixmap MainWindow::getCurrentPlayerIdleFrame() const
+{
+    if (playerIdleSheet_.isNull() || playerIdleFrameCount_ <= 0) return QPixmap();
+
+    const int frameX = playerIdleFrameIndex_ * playerIdleFrameWidth_;
+    return playerIdleSheet_.copy(frameX, 0, playerIdleFrameWidth_, playerIdleFrameHeight_);
+}
+
+QPixmap MainWindow::getCurrentPlayerRunFrame() const
+{
+    if (playerRunSheet_.isNull() || playerRunFrameCount_ <= 0) return QPixmap();
+
+    const int frameX = playerRunFrameIndex_ * playerRunFrameWidth_;
+    return playerRunSheet_.copy(frameX, 0, playerRunFrameWidth_, playerRunFrameHeight_);
 }
 
 std::pair<QPoint,QPoint> MainWindow::calculatePlayerPosition() const
@@ -174,6 +219,11 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
 
     setKeyState(event->key(), true);
+    if (event->key() == Qt::Key_Space && !event->isAutoRepeat())
+    {
+        attackRequested_ = true;
+    }
+
     if (!event->isAutoRepeat())
     {
         processInput();
@@ -198,6 +248,9 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event)
 void MainWindow::update()
 {
     processInput();
+    setPlayerState(resolvePlayerState());
+    updatePlayerAnimationFrame();
+
     engine_.update();
     redrawView();
 }
@@ -205,10 +258,6 @@ void MainWindow::update()
 void MainWindow::processInput()
 {
     updateMovement();
-    if (isShootPressed_)
-    {
-        engine_.playerShoots();
-    }
 }
 
 void MainWindow::updateMovement()
@@ -279,38 +328,142 @@ void MainWindow::setKeyState(int key, bool isPressed)
     }
 }
 
-QPixmap MainWindow::getRotatedPlayerImage() const
+MainWindow::PlayerState MainWindow::resolvePlayerState() const
 {
-    int rotationAngle = 0;
-    switch(engine_.playerDirection())
+    if (attackInProgress_ || attackRequested_ || isShootPressed_) return PlayerState::Attack;
+
+    if (isUpPressed_ || isDownPressed_ || isLeftPressed_ || isRightPressed_) return PlayerState::Run;
+
+    return PlayerState::Idle;
+}
+
+void MainWindow::setPlayerState(PlayerState nextState)
+{
+    if (currentPlayerState_ == nextState)
     {
-    case Direction::UP:
-        rotationAngle = 90;
+        if (currentPlayerState_ == PlayerState::Attack && !attackInProgress_ &&
+            (attackRequested_ || isShootPressed_))
+        {
+            playerAttackFrameIndex_ = 0;
+            playerAttackFrameAccumulator_ = 0.0;
+            attackInProgress_ = true;
+            attackRequested_ = false;
+            engine_.playerShoots();
+        }
+        return;
+    }
+
+    currentPlayerState_ = nextState;
+    switch (currentPlayerState_)
+    {
+    case PlayerState::Idle:
+        playerIdleFrameIndex_ = 0;
+        playerIdleFrameAccumulator_ = 0.0;
         break;
-    case Direction::DOWN:
-        rotationAngle = 270;
+    case PlayerState::Run:
+        playerRunFrameIndex_ = 0;
+        playerRunFrameAccumulator_ = 0.0;
         break;
-    case Direction::LEFT:
-        rotationAngle = 180;
+    case PlayerState::Attack:
+        playerAttackFrameIndex_ = 0;
+        playerAttackFrameAccumulator_ = 0.0;
+        attackInProgress_ = true;
+        attackRequested_ = false;
+        engine_.playerShoots();
         break;
-    case Direction::RIGHT:
-        break;
-    case Direction::UPPER_LEFT:
-        break;
-    case Direction::UPPER_RIGHT:
-        break;
-    case Direction::DOWNER_LEFT:
-        break;
-    case Direction::DOWNER_RIGHT:
-        break;
-    case Direction::CENTER:
-        break;
-    case Direction::INMOVABLE:
-        break;
-    case Direction::UNKNOWN:
+    case PlayerState::Damage:
+        playerDamageFrameIndex_ = 0;
+        playerDamageFrameAccumulator_ = 0.0;
         break;
     }
-    QPixmap playerPixmapCopy(playerPixmapOrginal_);
-    QTransform trans = QTransform().rotate(rotationAngle);
-    return playerPixmapCopy.transformed(trans);
+}
+
+void MainWindow::updatePlayerAnimationFrame()
+{
+  auto advanceLooping = [](int& frameIndex, int frameCount, double& accumulator, double framesPerTick)
+  {
+    if (frameCount <= 0 || framesPerTick <= 0.0) return;
+
+    accumulator += framesPerTick;
+    while (accumulator >= 1.0)
+    {
+        frameIndex = (frameIndex + 1) % frameCount;
+        accumulator -= 1.0;
+    }
+  };
+
+  switch (currentPlayerState_)
+  {
+  case PlayerState::Idle:
+    advanceLooping(
+      playerIdleFrameIndex_,
+      playerIdleFrameCount_,
+      playerIdleFrameAccumulator_,
+      playerIdleFramesPerTick_);
+    break;
+  case PlayerState::Run:
+    advanceLooping(
+      playerRunFrameIndex_,
+      playerRunFrameCount_,
+      playerRunFrameAccumulator_,
+      playerRunFramesPerTick_);
+    break;
+  case PlayerState::Attack:
+    if (playerAttackFrameCount_ <= 0 || playerAttackFramesPerTick_ <= 0.0)
+    {
+      attackInProgress_ = false;
+      break;
+    }
+    playerAttackFrameAccumulator_ += playerAttackFramesPerTick_;
+
+    while (playerAttackFrameAccumulator_ >= 1.0)
+    {
+      playerAttackFrameAccumulator_ -= 1.0;
+      if (playerAttackFrameIndex_ >= playerAttackFrameCount_ - 1)
+      {
+        attackInProgress_ = false;
+        break;
+      }
+      ++playerAttackFrameIndex_;
+    }
+    break;
+  case PlayerState::Damage:
+    advanceLooping(
+      playerDamageFrameIndex_,
+      playerDamageFrameCount_,
+      playerDamageFrameAccumulator_,
+      playerDamageFramesPerTick_);
+    break;
+  }
+}
+
+QPixmap MainWindow::getCurrentPlayerFrame() const
+{
+    switch (currentPlayerState_)
+    {
+    case PlayerState::Attack:
+        return getCurrentPlayerAttackFrame();
+    case PlayerState::Run:
+        return getCurrentPlayerRunFrame();
+    case PlayerState::Damage:
+        return getCurrentPlayerDamageFrame();
+    case PlayerState::Idle:
+    default:
+        return getCurrentPlayerIdleFrame();
+    }
+}
+
+QPixmap MainWindow::getRotatedPlayerImage() const
+{
+  QPixmap frame = getCurrentPlayerFrame();
+  if (frame.isNull()) return QPixmap();
+
+  const Direction dir = engine_.playerDirection();
+  const bool faceLeft =
+      dir == Direction::LEFT ||
+      dir == Direction::UPPER_LEFT ||
+      dir == Direction::DOWNER_LEFT;
+
+  if (!faceLeft) return frame;
+  return frame.transformed(QTransform().scale(-1, 1));
 }
