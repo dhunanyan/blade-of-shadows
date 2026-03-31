@@ -17,36 +17,18 @@ inline auto signum(int x)
   return (x > 0) - (x < 0);
 }
 
-Direction randDirection()
+std::size_t defaultLaneY(int height)
 {
-  auto randEdge = rand() % static_cast<uint8_t>(Direction::UPPER_LEFT);
-  return static_cast<Direction>(randEdge);
+  return static_cast<std::size_t>(height / 2);
 }
 } // namespace
 
 
 Position generateNewEnemyPosition(int width, int height)
 {
-  Position position2Generate = Position(rand() % width, rand() % height);
-
-  switch (randDirection())
-  {
-    case Direction::UP:
-      position2Generate.y_ = height-1;
-      break;
-    case Direction::DOWN:
-      position2Generate.y_ = 0;
-      break;
-    case Direction::LEFT:
-      position2Generate.x_ = 0;
-      break;
-    case Direction::RIGHT:
-      position2Generate.x_ = width-1;
-      break;
-    default:
-      break;
-  }
-  return position2Generate;
+  const auto yLane = defaultLaneY(height);
+  const auto xEdge = (rand() % 2 == 0) ? 0 : static_cast<std::size_t>(width - 1);
+  return Position(xEdge, yLane);
 }
 
 
@@ -147,58 +129,25 @@ void Engine::updateEnemies()
     }
 
     const int dx = signum(static_cast<int>(playerPos.x()) - static_cast<int>(enemy->position().x()));
-    const int dy = signum(static_cast<int>(playerPos.y()) - static_cast<int>(enemy->position().y()));
-
-    if (std::abs(dx) >= std::abs(dy))
+    if (dx > 0)
     {
-      if (dx > 0)
-      {
-        enemy->moveRight();
-      }
-      else if (dx < 0)
-      {
-        enemy->moveLeft();
-      }
-      else if (dy > 0)
-      {
-        enemy->moveUp();
-      }
-      else if (dy < 0)
-      {
-        enemy->moveDown();
-      }
+      enemy->moveRight();
     }
-    else if (dy > 0)
+    else if (dx < 0)
     {
-      enemy->moveUp();
-    }
-    else if (dy < 0)
-    {
-      enemy->moveDown();
+      enemy->moveLeft();
     }
   }
 }
 
 void Engine::movePlayerUp()
 {
-  player_.setDirection(Direction::UP);
-  Position next_position = Position(player_.position().x_, player_.position().y_ + 1);
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveUp();
+  // Side-scroller mode: vertical movement is disabled for now (jump is planned).
 }
 
 void Engine::movePlayerDown()
 {
-  player_.setDirection(Direction::DOWN);
-  Position next_position = Position(player_.position().x_, player_.position().y_ - 1);
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveDown();
+  // Side-scroller mode: vertical movement is disabled for now (jump is planned).
 }
 
 void Engine::movePlayerLeft()
@@ -224,55 +173,22 @@ void Engine::movePlayerRight()
 
 void Engine::movePlayerUpRight()
 {
-  player_.setDirection(Direction::UPPER_RIGHT);
-  Position next_position = Position(
-    player_.position().x_ + 1, 
-    player_.position().y_ + 1
-  );
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveUpRight();
+  // Side-scroller mode: diagonal movement is disabled for now.
 }
 
 void Engine::movePlayerUpLeft()
 {
-  player_.setDirection(Direction::UPPER_LEFT);
-  Position next_position = Position(
-    player_.position().x_ - 1, 
-    player_.position().y_ + 1
-  );
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveUpLeft();
+  // Side-scroller mode: diagonal movement is disabled for now.
 }
 
 void Engine::movePlayerDownRight()
 {
-  player_.setDirection(Direction::DOWNER_RIGHT);
-  Position next_position = Position(
-    player_.position().x_ + 1, 
-    player_.position().y_ - 1
-  );
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveDownRight();
+  // Side-scroller mode: diagonal movement is disabled for now.
 }
 
 void Engine::movePlayerDownLeft()
 {
-  player_.setDirection(Direction::DOWNER_LEFT);
-  Position next_position = Position(
-    player_.position().x_ - 1, 
-    player_.position().y_ - 1
-  );
-  if(!stage_.isInside(next_position)) return;
-  player_.moveDownLeft();
+  // Side-scroller mode: diagonal movement is disabled for now.
 }
 
 void Engine::playerShoots()

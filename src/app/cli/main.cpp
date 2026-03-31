@@ -52,19 +52,13 @@ int main(int argc, char** argv)
 
   for (std::size_t tick = 0; tick < ticks; ++tick)
   {
-    switch (tick % 4)
+    switch (tick % 2)
     {
       case 0:
         engine.movePlayerRight();
         break;
-      case 1:
-        engine.movePlayerUp();
-        break;
-      case 2:
-        engine.movePlayerLeft();
-        break;
       default:
-        engine.movePlayerDown();
+        engine.movePlayerLeft();
         break;
     }
 

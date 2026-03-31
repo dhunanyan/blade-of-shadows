@@ -217,12 +217,12 @@ std::pair<QPoint,QPoint> MainWindow::position2PairOfQPoints(Position position) c
 
 void MainWindow::onPressUp()
 {
-    engine_.movePlayerDown();
+    // Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
 }
 
 void MainWindow::onPressDown()
 {
-    engine_.movePlayerUp();
+    // Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
 }
 void MainWindow::onPressLeft()
 {
@@ -292,36 +292,6 @@ void MainWindow::processInput()
 
 void MainWindow::updateMovement()
 {
-    if (isUpPressed_ && isLeftPressed_)
-    {
-        engine_.movePlayerDownLeft();
-        return;
-    }
-    if (isUpPressed_ && isRightPressed_)
-    {
-        engine_.movePlayerDownRight();
-        return;
-    }
-    if (isDownPressed_ && isLeftPressed_)
-    {
-        engine_.movePlayerUpLeft();
-        return;
-    }
-    if (isDownPressed_ && isRightPressed_)
-    {
-        engine_.movePlayerUpRight();
-        return;
-    }
-    if (isUpPressed_)
-    {
-        engine_.movePlayerDown();
-        return;
-    }
-    if (isDownPressed_)
-    {
-        engine_.movePlayerUp();
-        return;
-    }
     if (isLeftPressed_)
     {
         engine_.movePlayerLeft();
@@ -362,7 +332,7 @@ MainWindow::PlayerState MainWindow::resolvePlayerState() const
 {
     if (attackInProgress_ || attackRequested_ || isShootPressed_) return PlayerState::Attack;
 
-    if (isUpPressed_ || isDownPressed_ || isLeftPressed_ || isRightPressed_) return PlayerState::Run;
+    if (isLeftPressed_ || isRightPressed_) return PlayerState::Run;
 
     return PlayerState::Idle;
 }
