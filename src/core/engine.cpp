@@ -271,10 +271,7 @@ void Engine::movePlayerDownLeft()
     player_.position().x_ - 1, 
     player_.position().y_ - 1
   );
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
+  if(!stage_.isInside(next_position)) return;
   player_.moveDownLeft();
 }
 

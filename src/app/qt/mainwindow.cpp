@@ -17,10 +17,6 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui_(new Ui::MainWindow),
       engine_(38, 25),
-      playerAttackSheet_(QString::fromUtf8(":/player_attack.png")),
-      playerDamageSheet_(QString::fromUtf8(":/player_damage.png")),
-      playerIdleSheet_(QString::fromUtf8(":/player_idle.png")),
-      playerRunSheet_(QString::fromUtf8(":/player_run.png")),
       backgroundOrginal_(QString::fromUtf8(":/background.png")),
       bulletOriginal_(QString::fromUtf8(":/bullet.png")),
       enemyOriginal_(QString::fromUtf8(":/enemy.png"))
@@ -31,10 +27,45 @@ MainWindow::MainWindow(QWidget *parent)
 
     QAudioOutput* audioOutput = new QAudioOutput(&player_);
     player_.setAudioOutput(audioOutput);
-    player_.setSource(QUrl("qrc:/music.mp3"));
+    // player_.setSource(QUrl("qrc:/music.mp3"));
     audioOutput->setVolume(50);
     player_.play();
 
+    playerIdleFrames_ = loadFrames({
+        QString::fromUtf8(":/player/idle/01.png"),
+        QString::fromUtf8(":/player/idle/02.png"),
+        QString::fromUtf8(":/player/idle/03.png"),
+        QString::fromUtf8(":/player/idle/04.png"),
+    });
+
+    playerRunFrames_ = loadFrames({
+        QString::fromUtf8(":/player/run/01.png"),
+        QString::fromUtf8(":/player/run/02.png"),
+        QString::fromUtf8(":/player/run/03.png"),
+        QString::fromUtf8(":/player/run/04.png"),
+        QString::fromUtf8(":/player/run/05.png"),
+        QString::fromUtf8(":/player/run/06.png"),
+        QString::fromUtf8(":/player/run/07.png"),
+        QString::fromUtf8(":/player/run/08.png"),
+    });
+
+    playerAttackFrames_ = loadFrames({
+        QString::fromUtf8(":/player/attack/01.png"),
+        QString::fromUtf8(":/player/attack/02.png"),
+        QString::fromUtf8(":/player/attack/03.png"),
+        QString::fromUtf8(":/player/attack/04.png"),
+        QString::fromUtf8(":/player/attack/05.png"),
+        QString::fromUtf8(":/player/attack/06.png"),
+        QString::fromUtf8(":/player/attack/07.png"),
+        QString::fromUtf8(":/player/attack/08.png"),
+    });
+
+    playerDamageFrames_ = loadFrames({
+        QString::fromUtf8(":/player/damage/01.png"),
+        QString::fromUtf8(":/player/damage/02.png"),
+        QString::fromUtf8(":/player/damage/03.png"),
+        QString::fromUtf8(":/player/damage/04.png"),
+    });
 }
 
 MainWindow::~MainWindow()
@@ -80,8 +111,7 @@ void MainWindow::drawPlayer(QPainter& painter)
   auto [topLeft, bottomRight] = calculatePlayerPosition();
   const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
 
-  const int scale = 5;
-  const QSize targetSize(cellSize.x() * scale, cellSize.y() * scale);
+  const QSize targetSize(cellSize.x() * playerScale_, cellSize.y() * playerScale_);
 
   QPoint drawTopLeft = topLeft - QPoint(
     (targetSize.width() - cellSize.x()) / 2,
@@ -132,34 +162,34 @@ void MainWindow::drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy)
 
 QPixmap MainWindow::getCurrentPlayerAttackFrame() const
 {
-    if (playerAttackSheet_.isNull() || playerAttackFrameCount_ <= 0) return QPixmap();
-
-    const int frameX = playerAttackFrameIndex_ * playerAttackFrameWidth_;
-    return playerAttackSheet_.copy(frameX, 0, playerAttackFrameWidth_, playerAttackFrameHeight_);
+    if (playerAttackFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerAttackFrameIndex_ % static_cast<int>(playerAttackFrames_.size()));
+    return playerAttackFrames_[idx];
 }
 
 QPixmap MainWindow::getCurrentPlayerDamageFrame() const
 {
-    if (playerDamageSheet_.isNull() || playerDamageFrameCount_ <= 0) return QPixmap();
-
-    const int frameX = playerDamageFrameIndex_ * playerDamageFrameWidth_;
-    return playerDamageSheet_.copy(frameX, 0, playerDamageFrameWidth_, playerDamageFrameHeight_);
+    if (playerDamageFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerDamageFrameIndex_ % static_cast<int>(playerDamageFrames_.size()));
+    return playerDamageFrames_[idx];
 }
 
 QPixmap MainWindow::getCurrentPlayerIdleFrame() const
 {
-    if (playerIdleSheet_.isNull() || playerIdleFrameCount_ <= 0) return QPixmap();
-
-    const int frameX = playerIdleFrameIndex_ * playerIdleFrameWidth_;
-    return playerIdleSheet_.copy(frameX, 0, playerIdleFrameWidth_, playerIdleFrameHeight_);
+    if (playerIdleFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerIdleFrameIndex_ % static_cast<int>(playerIdleFrames_.size()));
+    return playerIdleFrames_[idx];
 }
 
 QPixmap MainWindow::getCurrentPlayerRunFrame() const
 {
-    if (playerRunSheet_.isNull() || playerRunFrameCount_ <= 0) return QPixmap();
-
-    const int frameX = playerRunFrameIndex_ * playerRunFrameWidth_;
-    return playerRunSheet_.copy(frameX, 0, playerRunFrameWidth_, playerRunFrameHeight_);
+    if (playerRunFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerRunFrameIndex_ % static_cast<int>(playerRunFrames_.size()));
+    return playerRunFrames_[idx];
 }
 
 std::pair<QPoint,QPoint> MainWindow::calculatePlayerPosition() const
@@ -397,29 +427,31 @@ void MainWindow::updatePlayerAnimationFrame()
   case PlayerState::Idle:
     advanceLooping(
       playerIdleFrameIndex_,
-      playerIdleFrameCount_,
+      static_cast<int>(playerIdleFrames_.size()),
       playerIdleFrameAccumulator_,
       playerIdleFramesPerTick_);
     break;
   case PlayerState::Run:
     advanceLooping(
       playerRunFrameIndex_,
-      playerRunFrameCount_,
+      static_cast<int>(playerRunFrames_.size()),
       playerRunFrameAccumulator_,
       playerRunFramesPerTick_);
     break;
   case PlayerState::Attack:
-    if (playerAttackFrameCount_ <= 0 || playerAttackFramesPerTick_ <= 0.0)
+  {
+    if (playerAttackFrames_.empty() || playerAttackFramesPerTick_ <= 0.0)
     {
       attackInProgress_ = false;
       break;
     }
+    const int attackFrameCount = static_cast<int>(playerAttackFrames_.size());
     playerAttackFrameAccumulator_ += playerAttackFramesPerTick_;
 
     while (playerAttackFrameAccumulator_ >= 1.0)
     {
       playerAttackFrameAccumulator_ -= 1.0;
-      if (playerAttackFrameIndex_ >= playerAttackFrameCount_ - 1)
+      if (playerAttackFrameIndex_ >= attackFrameCount - 1)
       {
         attackInProgress_ = false;
         break;
@@ -427,14 +459,30 @@ void MainWindow::updatePlayerAnimationFrame()
       ++playerAttackFrameIndex_;
     }
     break;
+  }
   case PlayerState::Damage:
     advanceLooping(
       playerDamageFrameIndex_,
-      playerDamageFrameCount_,
+      static_cast<int>(playerDamageFrames_.size()),
       playerDamageFrameAccumulator_,
       playerDamageFramesPerTick_);
     break;
   }
+}
+
+std::vector<QPixmap> MainWindow::loadFrames(const std::vector<QString>& resourcePaths) const
+{
+    std::vector<QPixmap> frames;
+    frames.reserve(resourcePaths.size());
+    for (const auto& path : resourcePaths)
+    {
+        QPixmap frame(path);
+        if (!frame.isNull())
+        {
+            frames.push_back(frame);
+        }
+    }
+    return frames;
 }
 
 QPixmap MainWindow::getCurrentPlayerFrame() const

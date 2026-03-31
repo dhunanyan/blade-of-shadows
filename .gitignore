@@ -4,9 +4,10 @@ doxygen/
 
 ### Temporary playgrounds ###
 temp/
+.venv/
 
 ### IDEE
-.vscode
+.vscode/
 
 ### Runtime-fetched test deps ###
 tests/lib/

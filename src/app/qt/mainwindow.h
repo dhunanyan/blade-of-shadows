@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <utility>
+#include <vector>
 #include <QMainWindow>
 #include <QTimer>
 #include <QMediaPlayer>
@@ -64,42 +65,31 @@ private:  // methods:
     QPixmap getCurrentPlayerAttackFrame() const;
     QPixmap getCurrentPlayerRunFrame() const;
     QPixmap getCurrentPlayerFrame() const;
+    std::vector<QPixmap> loadFrames(const std::vector<QString>& resourcePaths) const;
 private:  // fields:
     Ui::MainWindow *ui_;
 
     Engine engine_;
 
-    QPixmap playerAttackSheet_;
+    std::vector<QPixmap> playerAttackFrames_;
     int playerAttackFrameIndex_ = 0;
-    int playerAttackFrameCount_ = 7;
-    int playerAttackFrameWidth_ = 96;
-    int playerAttackFrameHeight_ = 96;
     double playerAttackFrameAccumulator_ = 0.0;
     double playerAttackFramesPerTick_ = 2;
     bool attackRequested_ = false;
     bool attackInProgress_ = false;
 
-    QPixmap playerDamageSheet_;
+    std::vector<QPixmap> playerDamageFrames_;
     int playerDamageFrameIndex_ = 0;
-    int playerDamageFrameCount_ = 4;
-    int playerDamageFrameWidth_ = 96;
-    int playerDamageFrameHeight_ = 96;
     double playerDamageFrameAccumulator_ = 0.0;
     double playerDamageFramesPerTick_ = 1.2;
 
-    QPixmap playerIdleSheet_;
+    std::vector<QPixmap> playerIdleFrames_;
     int playerIdleFrameIndex_ = 0;
-    int playerIdleFrameCount_ = 10;
-    int playerIdleFrameWidth_ = 96;
-    int playerIdleFrameHeight_ = 96;
     double playerIdleFrameAccumulator_ = 0.0;
     double playerIdleFramesPerTick_ = 0.4;
 
-    QPixmap playerRunSheet_;
+    std::vector<QPixmap> playerRunFrames_;
     int playerRunFrameIndex_ = 0;
-    int playerRunFrameCount_ = 16;
-    int playerRunFrameWidth_ = 96;
-    int playerRunFrameHeight_ = 96;
     double playerRunFrameAccumulator_ = 0.0;
     double playerRunFramesPerTick_ = 0.9;
     
@@ -110,6 +100,7 @@ private:  // fields:
     QTimer timer_;
 
     QMediaPlayer player_;
+    const int playerScale_ = 2;
 
     bool isUpPressed_ = false;
     bool isDownPressed_ = false;
