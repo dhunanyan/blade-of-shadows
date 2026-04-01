@@ -7,7 +7,6 @@
 #include <QMediaPlayer>
 #include <QAudioOutput>
 #include "game/core/object.h"
-#include "game/core/bullet.h"
 #include "game/core/enemy.h"
 #include "game/app/qt/mainwindow.h"
 #include "./ui_mainwindow.h"
@@ -20,7 +19,6 @@ MainWindow::MainWindow(QWidget *parent)
       backgroundLayer1_(QString::fromUtf8(":/background_layer_1.png")),
       backgroundLayer2_(QString::fromUtf8(":/background_layer_2.png")),
       backgroundLayer3_(QString::fromUtf8(":/background_layer_3.png")),
-      bulletOriginal_(QString::fromUtf8(":/bullet.png")),
       enemyOriginal_(QString::fromUtf8(":/enemy.png"))
 {
     ui_->setupUi(this);
@@ -156,7 +154,6 @@ void MainWindow::redrawView()
 
     tileMapper_.render(painter, tileSizePx_);
     drawPlayer(painter);
-    drawShoots(painter);
     drawEnemies(painter);
 
     ui_->background->setPixmap(composedBackground);
@@ -182,20 +179,6 @@ void MainWindow::drawPlayer(QPainter& painter)
   QPoint drawTopLeft(drawX, drawY);
   QRect targetRect(drawTopLeft, targetSize);
   painter.drawPixmap(targetRect, frame);
-}
-
-void MainWindow::drawShoots(QPainter& painter)
-{
-    for (const Bullet& shoot : engine_.bullets())
-    {
-        auto [shootPositionTopLeft, shootPositionBottomRight] = position2PairOfQPoints(shoot.position());
-        auto cellSize = shootPositionBottomRight - shootPositionTopLeft;
-        auto shootSize = cellSize / 3;
-        shootPositionTopLeft += shootSize;
-        shootPositionBottomRight -= shootSize;
-        QRect shootPosition(shootPositionTopLeft, shootPositionBottomRight);
-        painter.drawPixmap(shootPosition, bulletOriginal_);
-    }
 }
 
 void MainWindow::drawEnemies(QPainter& painter)
@@ -316,12 +299,14 @@ std::pair<QPoint,QPoint> MainWindow::position2PairOfQPoints(Position position) c
 
 void MainWindow::onPressUp()
 {
-    // TODO: Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
+    isUpPressed_ = true;
+    isDownPressed_ = false;
 }
 
 void MainWindow::onPressDown()
 {
-    // TODO: Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
+    isDownPressed_ = true;
+    isUpPressed_ = false;
 }
 void MainWindow::onPressLeft()
 {
@@ -334,11 +319,6 @@ void MainWindow::onPressRight()
     isRightPressed_ = true;
     updateMovement();
     isRightPressed_ = false;
-}
-
-void MainWindow::onPressShoot()
-{
-    engine_.playerShoots();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
@@ -458,7 +438,6 @@ void MainWindow::setPlayerState(PlayerState nextState)
             playerAttackFrameAccumulator_ = 0.0;
             attackInProgress_ = true;
             attackRequested_ = false;
-            engine_.playerShoots();
         }
         return;
     }
@@ -471,7 +450,6 @@ void MainWindow::setPlayerState(PlayerState nextState)
         playerAttackFrameAccumulator_ = 0.0;
         attackInProgress_ = true;
         attackRequested_ = false;
-        engine_.playerShoots();
         break;
     case PlayerState::Damage:
         playerDamageFrameIndex_ = 0;

@@ -4,11 +4,7 @@
 #include "game/core/engine.h"
 #include "game/core/player.h"
 #include "game/core/stage.h"
-#include "game/core/bullet.h"
 #include "game/core/enemy.h"
-
-float Bullet::speed_ = 2;
-float Bullet::damage_ = 23;
 
 namespace
 {
@@ -51,7 +47,6 @@ void Engine::update()
 {
   applyHorizontalMovement(player_);
   applyGravity(player_);
-  updateBullets();
   updateEnemies();
   randEnemies();
 }
@@ -132,62 +127,6 @@ void Engine::applyGravity(Enemy& enemy)
     float vy = enemy.velocityY() + gravity;
     if (vy > maxFallSpeed) vy = maxFallSpeed;
     enemy.setVelocityY(vy);
-  }
-}
-
-void Engine::updateBullets()
-{
-  for (auto& bullet : bullets_)
-  {
-    moveBulletTowardsDirection(bullet);
-    for (const auto& enemy : enemies_)
-    {
-      if(enemy->position().x() == bullet.position().x() && enemy->position().y() == bullet.position().y())
-      {
-        enemy->decreaseLife(bullet.damage());
-      }
-    }
-  }
-
-  bullets_.erase(
-    std::remove_if(
-      bullets_.begin(), bullets_.end(),
-      [this](const Bullet& bullet) 
-      { 
-        return isBulletOutOfBounds(bullet); 
-      }),
-      bullets_.end()
-  );
-}
-
-void Engine::moveBulletTowardsDirection(Bullet& bullet)
-{
-  switch (bullet.direction())
-  {
-    case Direction::UP:
-      bullet.moveUp();
-      break;
-    case Direction::DOWN:
-      bullet.moveDown();
-      break;
-    case Direction::LEFT:
-      bullet.moveLeft();
-      break;
-    case Direction::UPPER_LEFT:
-      bullet.moveUpLeft();
-      break;
-    case Direction::UPPER_RIGHT:
-      bullet.moveUpRight();
-      break;
-    case Direction::DOWNER_LEFT:
-      bullet.moveDownLeft();
-      break;
-    case Direction::DOWNER_RIGHT:
-      bullet.moveDownRight();
-      break;
-    default:
-      bullet.moveRight();
-      break;
   }
 }
 
@@ -272,44 +211,6 @@ void Engine::movePlayerDownRight()
 void Engine::movePlayerDownLeft()
 {
   // TODO: Side-scroller mode: diagonal movement is disabled for now.
-}
-
-void Engine::playerShoots()
-{
-  Position bulletPosition = player_.position();
-  switch (player_.direction())
-  {
-    case Direction::UP:
-      bulletPosition.moveUp();
-      break;
-    case Direction::DOWN:
-      bulletPosition.moveDown();
-      break;
-    case Direction::LEFT:
-      bulletPosition.moveLeft();
-      break;
-    case Direction::UPPER_LEFT:
-      bulletPosition.moveUpLeft();
-      break;
-    case Direction::UPPER_RIGHT:
-      bulletPosition.moveUpRight();
-      break;
-    case Direction::DOWNER_LEFT:
-      bulletPosition.moveDownLeft();
-      break;
-    case Direction::DOWNER_RIGHT:
-      bulletPosition.moveDownRight();
-      break;
-    default:
-      bulletPosition.moveRight();
-      break;
-  }
-  bullets_.push_back(Bullet(player_.direction(), bulletPosition));
-}
-
-bool Engine::isBulletOutOfBounds(const Bullet& bullet) const
-{
-  return !stage_.isInside(bullet.position());
 }
 
 bool Engine::isSolidAt(int gridX, int gridY) const

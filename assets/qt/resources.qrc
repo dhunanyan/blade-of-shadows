@@ -57,7 +57,6 @@
         <file alias="player/run/06.png">../images/player/run/06.png</file>
         <file alias="player/run/07.png">../images/player/run/07.png</file>
         <file alias="player/run/08.png">../images/player/run/08.png</file>
-        <file alias="bullet.png">../images/bullet/bullet.png</file>
         <file alias="enemy.png">../images/enemy/enemy.png</file>
         <file alias="music.mp3">../audio/music.mp3</file>
         <file alias="musicAfterLoosing.mp3">../audio/musicAfterLoosing.mp3</file>

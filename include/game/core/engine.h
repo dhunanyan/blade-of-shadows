@@ -10,7 +10,6 @@
 #include "game/core/stage.h"
 
 struct Position;
-class Bullet;
 class Enemy;
 
 
@@ -71,7 +70,6 @@ public:
   {
     player_.setDirection(direction);
   }
-  void playerShoots();
   void movePlayerUp();
   void movePlayerDown();
   void movePlayerLeft();
@@ -84,11 +82,6 @@ public:
   void applyGravity(Player& player);
   void applyGravity(Enemy& enemy);
 
-  const std::vector<Bullet>& bullets() const
-  {
-    return bullets_;
-  }
-  void moveBulletTowardsDirection(Bullet& bullet);
   void update();
   const std::vector<std::shared_ptr<Enemy>>& enemies() const
   {
@@ -98,18 +91,15 @@ public:
 protected:
   void randEnemies(Position (*positionGenerator)(int, int)=generateNewEnemyPosition);
   void updateEnemies();
-  void updateBullets();
   void applyHorizontalMovement(Player& player);
   void syncPlayerGridPosition();
 
 private:
-  bool isBulletOutOfBounds(const Bullet& bullet) const;
   bool isSolidAt(int gridX, int gridY) const;
 
 private:
   Player player_;
   Stage stage_;
-  std::vector<Bullet> bullets_;
 
   constexpr static std::size_t maxEnemies_ = 10;
   std::vector<std::shared_ptr<Enemy>> enemies_;

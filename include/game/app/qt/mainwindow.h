@@ -29,7 +29,6 @@ public slots:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
 
-    void onPressShoot();
     void onPressUp();
     void onPressDown();
     void onPressLeft();
@@ -58,7 +57,6 @@ private:
     void setPlayerState(PlayerState nextState);
     void updatePlayerAnimationFrame();
     void drawPlayer(QPainter& painter);
-    void drawShoots(QPainter& painter);
     void drawEnemies(QPainter& painter);
 
     QPixmap getRotatedPlayerImage() const;
@@ -137,7 +135,6 @@ private:
     QPixmap backgroundLayer1_;
     QPixmap backgroundLayer2_;
     QPixmap backgroundLayer3_;
-    QPixmap bulletOriginal_;
     QPixmap enemyOriginal_;
 
     QTimer timer_;

@@ -6,7 +6,6 @@
 enum class ObjectType
 {
   OBJECT_PLAYER,
-  OBJECT_BULLET,
   OBJECT_ENEMY,
   OBJECT_WALL,
   OBJECT_UNKNOWN

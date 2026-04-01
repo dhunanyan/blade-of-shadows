@@ -4,7 +4,6 @@
 #include <string>
 
 #include "game/core/engine.h"
-#include "game/core/bullet.h"
 
 namespace {
 std::size_t parsePositiveArg(const char* value, std::size_t fallback)
@@ -62,11 +61,6 @@ int main(int argc, char** argv)
         break;
     }
 
-    if (tick % 3 == 0)
-    {
-      engine.playerShoots();
-    }
-
     engine.update();
   }
 
@@ -76,7 +70,6 @@ int main(int argc, char** argv)
             << "stage: " << engine.stageWidthCells() << "x" << engine.stageHeightCells() << "\n"
             << "player: (" << playerPosition.x() << ", " << playerPosition.y() << ")\n"
             << "player_alive: " << (engine.isPlayerAlive() ? "true" : "false") << "\n"
-            << "bullets: " << engine.bullets().size() << "\n"
             << "enemies: " << engine.enemies().size() << "\n";
 
   return EXIT_SUCCESS;

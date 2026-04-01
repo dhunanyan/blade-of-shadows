@@ -11,7 +11,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CLI_TARGET_NAME game_cli)
 
 set(GAME_CORE_HEADERS
-    include/game/core/bullet.h
     include/game/core/direction.h
     include/game/core/enemy.h
     include/game/core/engine.h

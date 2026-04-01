@@ -4,7 +4,6 @@
 
 #include "game/core/engine.h"
 #include "game/core/position.h"
-#include "game/core/bullet.h"
 #include "game/core/enemy.h"
 
 using namespace std;
@@ -72,29 +71,6 @@ TEST_F(EngineTester, engineCanMovePlayer)
     engine.movePlayerUp();
     ASSERT_EQ(playerAfterMovingUp.x(), engine.playerPosition().x());
     ASSERT_EQ(playerAfterMovingUp.y(), engine.playerPosition().y());
-#endif
-}
-
-TEST_F(EngineTester, engineHandlePlayerShooting)
-{
-#ifdef UNIMPLEMENTED_engineHandlePlayerShooting
-    ADD_FAILURE() << "Not implemented: UNIMPLEMENTED_engineHandlePlayerShooting";
-#else
-    EngineUnderTest engine(width, height);
-
-    const Direction playerDefaultDirection = Direction::RIGHT;
-    const Position playerDefaultPosition(width/2, height/2);
-    const Position shootPosition(playerDefaultPosition.x()+1, playerDefaultPosition.y());
-
-    ASSERT_EQ(0, engine.bullets().size());
-
-    engine.playerShoots();
-
-    const auto& shoots = engine.bullets();
-    ASSERT_EQ(1, shoots.size());
-    ASSERT_EQ(playerDefaultDirection, shoots[0].direction());
-    ASSERT_EQ(shootPosition.x(), shoots[0].position().x());
-    ASSERT_EQ(shootPosition.y(), shoots[0].position().y());
 #endif
 }
 
