@@ -9,6 +9,8 @@ class Player : public Object
 private:
   bool isAlive_;
   Direction direction_;
+  float velocityY_ = 0.0f;
+  bool isGrounded_ = false;
 public:
   Player(): Object(ObjectType::OBJECT_PLAYER), isAlive_(true), direction_(Direction::RIGHT) {}
   Direction direction() const
@@ -26,6 +28,22 @@ public:
   void setIsAlive(bool isAlive)
   {
     isAlive_ = isAlive;
+  }
+  float velocityY() const
+  {
+    return velocityY_;
+  }
+  void setVelocityY(float newVelocityY)
+  {
+    velocityY_ = newVelocityY;
+  }
+  bool isGrounded() const
+  {
+    return isGrounded_;
+  }
+  void setIsGrounded(bool newIsGrounded)
+  {
+    isGrounded_ = newIsGrounded;
   }
 };
 

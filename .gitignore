@@ -8,6 +8,7 @@ temp/
 
 ### IDEE
 .vscode/
+*.aseprite
 
 ### Runtime-fetched test deps ###
 tests/lib/

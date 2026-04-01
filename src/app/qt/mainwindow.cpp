@@ -26,34 +26,16 @@ MainWindow::MainWindow(QWidget *parent)
     ui_->setupUi(this);
     ui_->background->setScaledContents(false);
     tileMapper_.loadFromJsonResource(QString::fromUtf8(":/levels/sample_level.json"));
+    engine_.setSolidQuery([this](int x, int y) {
+        return tileMapper_.isSolidAt(x, y);
+    });
     connect(&timer_, &QTimer::timeout, this, &MainWindow::update);
-    timer_.start(/*msec=*/100);
+    timer_.start(16);
 
     QAudioOutput* audioOutput = new QAudioOutput(&player_);
     player_.setAudioOutput(audioOutput);
-    // player_.setSource(QUrl("qrc:/music.mp3"));
     audioOutput->setVolume(50);
     player_.play();
-
-    playerIdleFrames_ = loadFrames({
-        QString::fromUtf8(":/player/idle/01.png"),
-        QString::fromUtf8(":/player/idle/02.png"),
-        QString::fromUtf8(":/player/idle/03.png"),
-        QString::fromUtf8(":/player/idle/04.png"),
-        QString::fromUtf8(":/player/idle/05.png"),
-        QString::fromUtf8(":/player/idle/06.png"),
-    });
-
-    playerRunFrames_ = loadFrames({
-        QString::fromUtf8(":/player/run/01.png"),
-        QString::fromUtf8(":/player/run/02.png"),
-        QString::fromUtf8(":/player/run/03.png"),
-        QString::fromUtf8(":/player/run/04.png"),
-        QString::fromUtf8(":/player/run/05.png"),
-        QString::fromUtf8(":/player/run/06.png"),
-        QString::fromUtf8(":/player/run/07.png"),
-        QString::fromUtf8(":/player/run/08.png"),
-    });
 
     playerAttackFrames_ = loadFrames({
         QString::fromUtf8(":/player/attack/01.png"),
@@ -73,6 +55,65 @@ MainWindow::MainWindow(QWidget *parent)
         QString::fromUtf8(":/player/damage/06.png"),
         QString::fromUtf8(":/player/damage/07.png"),
         QString::fromUtf8(":/player/damage/08.png"),
+    });
+
+    playerDeathFrames_ = loadFrames({
+        QString::fromUtf8(":/player/death/01.png"),
+        QString::fromUtf8(":/player/death/02.png"),
+        QString::fromUtf8(":/player/death/03.png"),
+        QString::fromUtf8(":/player/death/04.png"),
+    });
+
+    playerDodgeFrames_ = loadFrames({
+        QString::fromUtf8(":/player/dodge/01.png"),
+    });
+
+    playerDodgeMoveFrames_ = loadFrames({
+        QString::fromUtf8(":/player/dodge-move/01.png"),
+        QString::fromUtf8(":/player/dodge-move/02.png"),
+        QString::fromUtf8(":/player/dodge-move/03.png"),
+    });
+
+    playerFallFrames_ = loadFrames({
+        QString::fromUtf8(":/player/fall/01.png"),
+        QString::fromUtf8(":/player/fall/02.png"),
+        QString::fromUtf8(":/player/fall/03.png"),
+        QString::fromUtf8(":/player/fall/04.png"),
+        QString::fromUtf8(":/player/fall/05.png"),
+        QString::fromUtf8(":/player/fall/06.png"),
+        QString::fromUtf8(":/player/fall/07.png"),
+        QString::fromUtf8(":/player/fall/08.png"),
+    });
+
+    playerIdleFrames_ = loadFrames({
+        QString::fromUtf8(":/player/idle/01.png"),
+        QString::fromUtf8(":/player/idle/02.png"),
+        QString::fromUtf8(":/player/idle/03.png"),
+        QString::fromUtf8(":/player/idle/04.png"),
+        QString::fromUtf8(":/player/idle/05.png"),
+        QString::fromUtf8(":/player/idle/06.png"),
+    });
+
+    playerJumpFrames_ = loadFrames({
+        QString::fromUtf8(":/player/jump/01.png"),
+        QString::fromUtf8(":/player/jump/02.png"),
+        QString::fromUtf8(":/player/jump/03.png"),
+        QString::fromUtf8(":/player/jump/04.png"),
+        QString::fromUtf8(":/player/jump/05.png"),
+        QString::fromUtf8(":/player/jump/06.png"),
+        QString::fromUtf8(":/player/jump/07.png"),
+        QString::fromUtf8(":/player/jump/08.png"),
+    });
+
+    playerRunFrames_ = loadFrames({
+        QString::fromUtf8(":/player/run/01.png"),
+        QString::fromUtf8(":/player/run/02.png"),
+        QString::fromUtf8(":/player/run/03.png"),
+        QString::fromUtf8(":/player/run/04.png"),
+        QString::fromUtf8(":/player/run/05.png"),
+        QString::fromUtf8(":/player/run/06.png"),
+        QString::fromUtf8(":/player/run/07.png"),
+        QString::fromUtf8(":/player/run/08.png"),
     });
 }
 
@@ -134,10 +175,11 @@ void MainWindow::drawPlayer(QPainter& painter)
 
   const QSize targetSize(cellSize.x() * playerScale_, cellSize.y() * playerScale_);
 
-  QPoint drawTopLeft = topLeft - QPoint(
-    (targetSize.width() - cellSize.x()) / 2,
-    (targetSize.height() - cellSize.y()) / 2
-  );
+  const int playerX = static_cast<int>(std::lround(engine_.playerPixelX()));
+  const int playerY = static_cast<int>(std::lround(engine_.playerPixelY()));
+  const int drawX = playerX - (targetSize.width() - cellSize.x()) / 2;
+  const int drawY = playerY + cellSize.y() - targetSize.height();
+  QPoint drawTopLeft(drawX, drawY);
   QRect targetRect(drawTopLeft, targetSize);
   painter.drawPixmap(targetRect, frame);
 }
@@ -197,12 +239,52 @@ QPixmap MainWindow::getCurrentPlayerDamageFrame() const
     return playerDamageFrames_[idx];
 }
 
+QPixmap MainWindow::getCurrentPlayerDeathFrame() const
+{
+    if (playerDeathFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerDeathFrameIndex_ % static_cast<int>(playerDeathFrames_.size()));
+    return playerDeathFrames_[idx];
+}
+
+QPixmap MainWindow::getCurrentPlayerDodgeFrame() const
+{
+    if (playerDodgeFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerDodgeFrameIndex_ % static_cast<int>(playerDodgeFrames_.size()));
+    return playerDodgeFrames_[idx];
+}
+
+QPixmap MainWindow::getCurrentPlayerDodgeMoveFrame() const
+{
+    if (playerDodgeMoveFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerDodgeMoveFrameIndex_ % static_cast<int>(playerDodgeMoveFrames_.size()));
+    return playerDodgeMoveFrames_[idx];
+}
+
+QPixmap MainWindow::getCurrentPlayerFallFrame() const
+{
+    if (playerFallFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerFallFrameIndex_ % static_cast<int>(playerFallFrames_.size()));
+    return playerFallFrames_[idx];
+}
+
 QPixmap MainWindow::getCurrentPlayerIdleFrame() const
 {
     if (playerIdleFrames_.empty()) return QPixmap();
     const std::size_t idx =
         static_cast<std::size_t>(playerIdleFrameIndex_ % static_cast<int>(playerIdleFrames_.size()));
     return playerIdleFrames_[idx];
+}
+
+QPixmap MainWindow::getCurrentPlayerJumpFrame() const
+{
+    if (playerJumpFrames_.empty()) return QPixmap();
+    const std::size_t idx =
+        static_cast<std::size_t>(playerJumpFrameIndex_ % static_cast<int>(playerJumpFrames_.size()));
+    return playerJumpFrames_[idx];
 }
 
 QPixmap MainWindow::getCurrentPlayerRunFrame() const
@@ -234,20 +316,24 @@ std::pair<QPoint,QPoint> MainWindow::position2PairOfQPoints(Position position) c
 
 void MainWindow::onPressUp()
 {
-    // Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
+    // TODO: Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
 }
 
 void MainWindow::onPressDown()
 {
-    // Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
+    // TODO: Side-scroller mode: vertical movement disabled until jump/gravity is implemented.
 }
 void MainWindow::onPressLeft()
 {
-    engine_.movePlayerLeft();
+    isLeftPressed_ = true;
+    updateMovement();
+    isLeftPressed_ = false;
 }
 void MainWindow::onPressRight()
 {
-    engine_.movePlayerRight();
+    isRightPressed_ = true;
+    updateMovement();
+    isRightPressed_ = false;
 }
 
 void MainWindow::onPressShoot()
@@ -309,16 +395,17 @@ void MainWindow::processInput()
 
 void MainWindow::updateMovement()
 {
-    if (isLeftPressed_)
+    int moveIntentX = 0;
+    if (isLeftPressed_ && !isRightPressed_)
     {
-        engine_.movePlayerLeft();
-        return;
+        moveIntentX = -1;
     }
-    if (isRightPressed_)
+    else if (isRightPressed_ && !isLeftPressed_)
     {
-        engine_.movePlayerRight();
-        return;
+        moveIntentX = 1;
     }
+
+    engine_.setPlayerMoveIntentX(moveIntentX);
 }
 
 void MainWindow::setKeyState(int key, bool isPressed)
@@ -349,6 +436,12 @@ MainWindow::PlayerState MainWindow::resolvePlayerState() const
 {
     if (attackInProgress_ || attackRequested_ || isShootPressed_) return PlayerState::Attack;
 
+    if ((isLeftPressed_ || isRightPressed_) && isDownPressed_) return PlayerState::DodgeMove;
+
+    if(isDownPressed_) return PlayerState::Dodge;
+
+    if(isUpPressed_) return PlayerState::Jump;
+
     if (isLeftPressed_ || isRightPressed_) return PlayerState::Run;
 
     return PlayerState::Idle;
@@ -373,14 +466,6 @@ void MainWindow::setPlayerState(PlayerState nextState)
     currentPlayerState_ = nextState;
     switch (currentPlayerState_)
     {
-    case PlayerState::Idle:
-        playerIdleFrameIndex_ = 0;
-        playerIdleFrameAccumulator_ = 0.0;
-        break;
-    case PlayerState::Run:
-        playerRunFrameIndex_ = 0;
-        playerRunFrameAccumulator_ = 0.0;
-        break;
     case PlayerState::Attack:
         playerAttackFrameIndex_ = 0;
         playerAttackFrameAccumulator_ = 0.0;
@@ -391,6 +476,34 @@ void MainWindow::setPlayerState(PlayerState nextState)
     case PlayerState::Damage:
         playerDamageFrameIndex_ = 0;
         playerDamageFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::Death:
+        playerDeathFrameIndex_ = 0;
+        playerDeathFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::Dodge:
+        playerDodgeFrameIndex_ = 0;
+        playerDodgeFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::DodgeMove:
+        playerDodgeMoveFrameIndex_ = 0;
+        playerDodgeMoveFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::Fall:
+        playerFallFrameIndex_ = 0;
+        playerFallFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::Idle:
+        playerIdleFrameIndex_ = 0;
+        playerIdleFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::Jump:
+        playerJumpFrameIndex_ = 0;
+        playerJumpFrameAccumulator_ = 0.0;
+        break;
+    case PlayerState::Run:
+        playerRunFrameIndex_ = 0;
+        playerRunFrameAccumulator_ = 0.0;
         break;
     }
 }
@@ -411,20 +524,6 @@ void MainWindow::updatePlayerAnimationFrame()
 
   switch (currentPlayerState_)
   {
-  case PlayerState::Idle:
-    advanceLooping(
-      playerIdleFrameIndex_,
-      static_cast<int>(playerIdleFrames_.size()),
-      playerIdleFrameAccumulator_,
-      playerIdleFramesPerTick_);
-    break;
-  case PlayerState::Run:
-    advanceLooping(
-      playerRunFrameIndex_,
-      static_cast<int>(playerRunFrames_.size()),
-      playerRunFrameAccumulator_,
-      playerRunFramesPerTick_);
-    break;
   case PlayerState::Attack:
   {
     if (playerAttackFrames_.empty() || playerAttackFramesPerTick_ <= 0.0)
@@ -452,7 +551,64 @@ void MainWindow::updatePlayerAnimationFrame()
       playerDamageFrameIndex_,
       static_cast<int>(playerDamageFrames_.size()),
       playerDamageFrameAccumulator_,
-      playerDamageFramesPerTick_);
+      playerDamageFramesPerTick_
+    );
+    break;
+  case PlayerState::Death:
+    advanceLooping(
+      playerDeathFrameIndex_,
+      static_cast<int>(playerDeathFrames_.size()),
+      playerDeathFrameAccumulator_,
+      playerDeathFramesPerTick_
+    );
+    break;
+  case PlayerState::Dodge:
+    advanceLooping(
+      playerDodgeFrameIndex_,
+      static_cast<int>(playerDodgeFrames_.size()),
+      playerDodgeFrameAccumulator_,
+      playerDodgeFramesPerTick_
+    );
+    break;
+  case PlayerState::DodgeMove:
+    advanceLooping(
+      playerDodgeMoveFrameIndex_,
+      static_cast<int>(playerDodgeMoveFrames_.size()),
+      playerDodgeMoveFrameAccumulator_,
+      playerDodgeMoveFramesPerTick_
+    );
+    break;
+  case PlayerState::Fall:
+    advanceLooping(
+      playerFallFrameIndex_,
+      static_cast<int>(playerFallFrames_.size()),
+      playerFallFrameAccumulator_,
+      playerFallFramesPerTick_
+    );
+    break;
+  case PlayerState::Idle:
+    advanceLooping(
+      playerIdleFrameIndex_,
+      static_cast<int>(playerIdleFrames_.size()),
+      playerIdleFrameAccumulator_,
+      playerIdleFramesPerTick_
+    );
+    break;
+  case PlayerState::Jump:
+    advanceLooping(
+      playerJumpFrameIndex_,
+      static_cast<int>(playerJumpFrames_.size()),
+      playerJumpFrameAccumulator_,
+      playerJumpFramesPerTick_
+    );
+    break;
+  case PlayerState::Run:
+    advanceLooping(
+      playerRunFrameIndex_,
+      static_cast<int>(playerRunFrames_.size()),
+      playerRunFrameAccumulator_,
+      playerRunFramesPerTick_
+    );
     break;
   }
 }
@@ -478,10 +634,20 @@ QPixmap MainWindow::getCurrentPlayerFrame() const
     {
     case PlayerState::Attack:
         return getCurrentPlayerAttackFrame();
-    case PlayerState::Run:
-        return getCurrentPlayerRunFrame();
     case PlayerState::Damage:
         return getCurrentPlayerDamageFrame();
+    case PlayerState::Death:
+        return getCurrentPlayerDeathFrame();
+    case PlayerState::Dodge:
+        return getCurrentPlayerDodgeFrame();
+    case PlayerState::DodgeMove:
+        return getCurrentPlayerDodgeMoveFrame();
+    case PlayerState::Fall:
+        return getCurrentPlayerFallFrame();
+    case PlayerState::Jump:
+        return getCurrentPlayerJumpFrame();
+    case PlayerState::Run:
+        return getCurrentPlayerRunFrame();
     case PlayerState::Idle:
     default:
         return getCurrentPlayerIdleFrame();

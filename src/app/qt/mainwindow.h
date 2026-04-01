@@ -40,10 +40,15 @@ public slots:
 private:
     enum class PlayerState
     {
-        Idle,
-        Run,
         Attack,
-        Damage
+        Damage,
+        Death,
+        Dodge,
+        DodgeMove,
+        Fall,
+        Idle,
+        Jump,
+        Run,
     };
 
     void processInput();
@@ -61,13 +66,18 @@ private:
     QPoint position2QPoint(Position position) const;
     std::pair<QPoint,QPoint> position2PairOfQPoints(Position position) const;
     void drawLifeBarAboveEnemy(QPainter &painter, const Enemy &enemy);
-    QPixmap getCurrentPlayerIdleFrame() const;
-    QPixmap getCurrentPlayerDamageFrame() const;
-    QPixmap getCurrentPlayerAttackFrame() const;
-    QPixmap getCurrentPlayerRunFrame() const;
     QPixmap getCurrentPlayerFrame() const;
+    QPixmap getCurrentPlayerAttackFrame() const;
+    QPixmap getCurrentPlayerDamageFrame() const;
+    QPixmap getCurrentPlayerDeathFrame() const;
+    QPixmap getCurrentPlayerDodgeFrame() const;
+    QPixmap getCurrentPlayerDodgeMoveFrame() const;
+    QPixmap getCurrentPlayerFallFrame() const;
+    QPixmap getCurrentPlayerIdleFrame() const;
+    QPixmap getCurrentPlayerJumpFrame() const;
+    QPixmap getCurrentPlayerRunFrame() const;
     std::vector<QPixmap> loadFrames(const std::vector<QString>& resourcePaths) const;
-private:  // fields:
+private:
     Ui::MainWindow *ui_;
 
     TileMapper tileMapper_;
@@ -76,24 +86,53 @@ private:  // fields:
     std::vector<QPixmap> playerAttackFrames_;
     int playerAttackFrameIndex_ = 0;
     double playerAttackFrameAccumulator_ = 0.0;
-    double playerAttackFramesPerTick_ = 2;
+    double playerAttackFramesPerTick_ = 0.33;
     bool attackRequested_ = false;
     bool attackInProgress_ = false;
 
     std::vector<QPixmap> playerDamageFrames_;
     int playerDamageFrameIndex_ = 0;
     double playerDamageFrameAccumulator_ = 0.0;
-    double playerDamageFramesPerTick_ = 1.2;
+    double playerDamageFramesPerTick_ = 0.20;
+    bool damageRequested_ = false;
+    bool damageInProgress_ = false;
+
+    std::vector<QPixmap> playerDeathFrames_;
+    int playerDeathFrameIndex_ = 0;
+    double playerDeathFrameAccumulator_ = 0.0;
+    double playerDeathFramesPerTick_ = 0.20;
+
+
+    std::vector<QPixmap> playerDodgeMoveFrames_;
+    int playerDodgeMoveFrameIndex_ = 0;
+    double playerDodgeMoveFrameAccumulator_ = 0.0;
+    double playerDodgeMoveFramesPerTick_ = 0.20;
+
+
+    std::vector<QPixmap> playerDodgeFrames_;
+    int playerDodgeFrameIndex_ = 0;
+    double playerDodgeFrameAccumulator_ = 0.0;
+    double playerDodgeFramesPerTick_ = 0.20;
+
+    std::vector<QPixmap> playerFallFrames_;
+    int playerFallFrameIndex_ = 0;
+    double playerFallFrameAccumulator_ = 0.0;
+    double playerFallFramesPerTick_ = 0.20;
 
     std::vector<QPixmap> playerIdleFrames_;
     int playerIdleFrameIndex_ = 0;
     double playerIdleFrameAccumulator_ = 0.0;
-    double playerIdleFramesPerTick_ = 0.4;
+    double playerIdleFramesPerTick_ = 0.067;
+
+    std::vector<QPixmap> playerJumpFrames_;
+    int playerJumpFrameIndex_ = 0;
+    double playerJumpFrameAccumulator_ = 0.0;
+    double playerJumpFramesPerTick_ = 0.20;
 
     std::vector<QPixmap> playerRunFrames_;
     int playerRunFrameIndex_ = 0;
     double playerRunFrameAccumulator_ = 0.0;
-    double playerRunFramesPerTick_ = 0.9;
+    double playerRunFramesPerTick_ = 0.15;
     
     QPixmap backgroundLayer1_;
     QPixmap backgroundLayer2_;
