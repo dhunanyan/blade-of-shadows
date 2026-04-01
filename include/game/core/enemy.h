@@ -23,7 +23,10 @@ public:
   void moveUp();
   void moveRight();
   void moveDown();
-  void setLastMoveTime(std::chrono::steady_clock::time_point lastMoveTime);
+  void setLastMoveTime(std::chrono::steady_clock::time_point lastMoveTime)
+  {
+    lastMoveTime_ = lastMoveTime;
+  }
   float velocityY() const
   {
     return velocityY_;

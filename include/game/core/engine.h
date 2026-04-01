@@ -1,6 +1,7 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
+#include <algorithm>
 #include <functional>
 #include <vector>
 #include <memory> // std::shared_ptr && std::unique_ptr
@@ -21,17 +22,55 @@ public:
   Engine(std::size_t stageWidth, std::size_t stageHeight);
   ~Engine();
 
-  std::size_t stageWidthCells() const;
-  std::size_t stageHeightCells() const;
-  Position playerPosition() const;
-  float playerPixelX() const;
-  float playerPixelY() const;
-  Direction playerDirection() const;
-  bool isPlayerAlive() const;
-  void setPlayerPosition(const Position& position);
-  void setPlayerPixelX(float pixelX);
-  void setPlayerMoveIntentX(int intentX);
-  void setPlayerDirection(Direction direction);
+  std::size_t stageWidthCells() const
+  {
+    return stage_.width();
+  }
+  std::size_t stageHeightCells() const
+  {
+    return stage_.height();
+  }
+  Position playerPosition() const
+  {
+    return player_.position();
+  }
+  float playerPixelX() const
+  {
+    return playerPixelX_;
+  }
+  float playerPixelY() const
+  {
+    return playerPixelY_;
+  }
+  Direction playerDirection() const
+  {
+    return player_.direction();
+  }
+  bool isPlayerAlive() const
+  {
+    return player_.isAlive();
+  }
+  void setPlayerPosition(const Position& position)
+  {
+    if (!stage_.isInside(position))
+    {
+      return;
+    }
+    player_.setPosition(position);
+  }
+  void setPlayerPixelX(float pixelX)
+  {
+    playerPixelX_ = pixelX;
+    syncPlayerGridPosition();
+  }
+  void setPlayerMoveIntentX(int intentX)
+  {
+    playerMoveIntentX_ = std::clamp(intentX, -1, 1);
+  }
+  void setPlayerDirection(Direction direction)
+  {
+    player_.setDirection(direction);
+  }
   void playerShoots();
   void movePlayerUp();
   void movePlayerDown();
@@ -45,10 +84,16 @@ public:
   void applyGravity(Player& player);
   void applyGravity(Enemy& enemy);
 
-  const std::vector<Bullet>& bullets() const;
+  const std::vector<Bullet>& bullets() const
+  {
+    return bullets_;
+  }
   void moveBulletTowardsDirection(Bullet& bullet);
   void update();
-  const std::vector<std::shared_ptr<Enemy>>& enemies() const;
+  const std::vector<std::shared_ptr<Enemy>>& enemies() const
+  {
+    return enemies_;
+  }
 
 protected:
   void randEnemies(Position (*positionGenerator)(int, int)=generateNewEnemyPosition);

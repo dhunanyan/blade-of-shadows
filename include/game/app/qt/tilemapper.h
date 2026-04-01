@@ -1,5 +1,5 @@
-#ifndef TILEMAPPER_H
-#define TILEMAPPER_H
+#ifndef GAME_APP_QT_TILEMAPPER_H
+#define GAME_APP_QT_TILEMAPPER_H
 
 #include <vector>
 #include <QString>
@@ -36,4 +36,4 @@ private:
     std::vector<std::vector<bool>> solidGrid_;
 };
 
-#endif // TILEMAPPER_H
+#endif // GAME_APP_QT_TILEMAPPER_H

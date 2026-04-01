@@ -9,7 +9,7 @@
 #include "game/core/object.h"
 #include "game/core/bullet.h"
 #include "game/core/enemy.h"
-#include "mainwindow.h"
+#include "game/app/qt/mainwindow.h"
 #include "./ui_mainwindow.h"
 
 

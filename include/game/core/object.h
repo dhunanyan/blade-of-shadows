@@ -18,8 +18,8 @@ protected:
   ObjectType type_;
   Position position_;
 public:
-  Object(ObjectType type);
-  Object(ObjectType type, Position position);
+  Object(ObjectType type): Object(type, Position(0, 0)) {}
+  Object(ObjectType type, Position position): type_(type), position_(position) {}
   void moveLeft();
   void moveUp();
   void moveRight();
@@ -28,9 +28,18 @@ public:
   void moveUpRight();
   void moveDownLeft();
   void moveDownRight();
-  void setPosition(Position position);
-  ObjectType type() const;
-  Position position() const;
+  void setPosition(Position position)
+  {
+    position_ = position;
+  }
+  ObjectType type() const
+  {
+    return type_;
+  }
+  Position position() const
+  {
+    return position_;
+  }
 };
 
 #endif // OBJECT_H

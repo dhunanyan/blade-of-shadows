@@ -1,13 +1,13 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef GAME_APP_QT_MAINWINDOW_H
+#define GAME_APP_QT_MAINWINDOW_H
 
 #include <utility>
 #include <vector>
 #include <QMainWindow>
 #include <QTimer>
 #include <QMediaPlayer>
+#include "game/app/qt/tilemapper.h"
 #include "game/core/engine.h"
-#include "tilemapper.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -154,4 +154,4 @@ private:
 
     PlayerState currentPlayerState_ = PlayerState::Idle;
 };
-#endif // MAINWINDOW_H
+#endif // GAME_APP_QT_MAINWINDOW_H

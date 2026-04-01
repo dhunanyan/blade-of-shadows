@@ -31,10 +31,6 @@ void Enemy::decreaseLife(float damage)
   }
   life_ -= damage;
 }
-void Enemy::setLastMoveTime(std::chrono::steady_clock::time_point lastMoveTime)
-{
-  lastMoveTime_ = lastMoveTime;
-}
 void Enemy::moveLeft()
 {
   Object::moveLeft();

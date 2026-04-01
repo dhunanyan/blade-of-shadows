@@ -21,9 +21,9 @@ endif()
 if (DEFINED QT_PACKAGE_PREFIX)
     set(PROJECT_SOURCES
         gameMain.cpp
-        mainwindow.h
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/mainwindow.h
         mainwindow.cpp
-        tilemapper.h
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/tilemapper.h
         tilemapper.cpp
         mainwindow.ui
         ${CMAKE_SOURCE_DIR}/assets/qt/resources.qrc
