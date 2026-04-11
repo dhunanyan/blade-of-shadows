@@ -6,8 +6,7 @@
 struct Position
 {
   std::size_t x_=0, y_=0;
-  Position(std::size_t x={}, std::size_t y={}): x_(x), y_(y)
-  {}
+  Position(std::size_t x={}, std::size_t y={}): x_(x), y_(y) {}
   auto x() const
   {
     return x_;

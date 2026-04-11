@@ -17,8 +17,8 @@ protected:
   ObjectType type_;
   Position position_;
 public:
-  Object(ObjectType type): Object(type, Position(0, 0)) {}
-  Object(ObjectType type, Position position): type_(type), position_(position) {}
+  Object(ObjectType type);
+  Object(ObjectType type, Position position);
   void moveLeft();
   void moveUp();
   void moveRight();

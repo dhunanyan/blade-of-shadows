@@ -24,6 +24,8 @@ set(GAME_CORE_SOURCES
     src/core/enemy.cpp
     src/core/engine.cpp
     src/core/object.cpp
+    src/core/player.cpp
+    src/core/stage.cpp
 )
 
 add_library(game_core ${GAME_CORE_HEADERS} ${GAME_CORE_SOURCES})

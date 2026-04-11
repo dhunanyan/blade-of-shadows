@@ -1,7 +1,6 @@
 #ifndef STAGE_H
 #define STAGE_H
 
-#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -14,14 +13,9 @@ class Stage
 private:
   std::size_t width_, height_;
   std::vector<std::shared_ptr<Object>> objects_;
-  std::size_t position2Index(Position position) const
-  {
-    return position.x_ + position.y_ * width_;
-  }
+  std::size_t position2Index(Position position) const;
 public:
-  Stage(std::size_t width, std::size_t height)
-      : width_(width), height_(height), objects_(width * height, nullptr)
-  {}
+  Stage(std::size_t width, std::size_t height);
   std::shared_ptr<Object> get(Position position)
   {
     return objects_[position2Index(position)];
@@ -34,12 +28,7 @@ public:
   {
     objects_[position2Index(position)] = std::move(object);
   }
-  bool isInside(Position position) const
-  {
-    auto [x, y] = position;
-    return x == std::clamp(x, static_cast<std::size_t>(0), width() - 1)
-        && y == std::clamp(y, static_cast<std::size_t>(0), height() - 1);
-  }
+  bool isInside(Position position) const;
   std::size_t width() const
   {
       return width_;

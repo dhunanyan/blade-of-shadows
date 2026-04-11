@@ -12,7 +12,7 @@ private:
   float velocityY_ = 0.0f;
   bool isGrounded_ = false;
 public:
-  Player(): Object(ObjectType::OBJECT_PLAYER), isAlive_(true), direction_(Direction::RIGHT) {}
+  Player();
   Direction direction() const
   {
     return direction_;
