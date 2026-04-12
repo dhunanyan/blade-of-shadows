@@ -25,6 +25,22 @@ if (DEFINED QT_PACKAGE_PREFIX)
         mainwindow.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/tilemapper.h
         tilemapper.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/game_controller.h
+        ${CMAKE_SOURCE_DIR}/include/game/app/input_mapper.h
+        ${CMAKE_SOURCE_DIR}/include/game/app/input_state.h
+        ${CMAKE_SOURCE_DIR}/src/app/game_controller.cpp
+        ${CMAKE_SOURCE_DIR}/src/app/input_mapper.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/renderer/player_animation_state.h
+        ${CMAKE_SOURCE_DIR}/include/game/renderer/asset_repository.h
+        ${CMAKE_SOURCE_DIR}/include/game/renderer/animation_controller.h
+        ${CMAKE_SOURCE_DIR}/include/game/renderer/player_presentation.h
+        ${CMAKE_SOURCE_DIR}/include/game/renderer/enemy_presentation.h
+        ${CMAKE_SOURCE_DIR}/include/game/renderer/scene_renderer.h
+        ${CMAKE_SOURCE_DIR}/src/renderer/asset_repository.cpp
+        ${CMAKE_SOURCE_DIR}/src/renderer/animation_controller.cpp
+        ${CMAKE_SOURCE_DIR}/src/renderer/player_presentation.cpp
+        ${CMAKE_SOURCE_DIR}/src/renderer/enemy_presentation.cpp
+        ${CMAKE_SOURCE_DIR}/src/renderer/scene_renderer.cpp
         mainwindow.ui
         ${CMAKE_SOURCE_DIR}/assets/qt/resources.qrc
     )
