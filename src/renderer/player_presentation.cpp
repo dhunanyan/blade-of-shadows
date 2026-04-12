@@ -16,7 +16,7 @@ PlayerPresentation::PlayerPresentation()
 void PlayerPresentation::update(const InputState& input, const Engine& engine, const AssetRepository& assets)
 {
   const bool attackActive = engine.isPlayerAttackInProgress();
-  setState(resolveState(input), attackActive);
+  setState(resolveState(input, engine), attackActive);
 
   const int frameCount = static_cast<int>(assets.playerClip(currentState_).size());
   animationController_.tick(frameCount);
@@ -49,8 +49,26 @@ bool PlayerPresentation::isFacingLeft(Direction direction) const
          direction == Direction::DOWNER_LEFT;
 }
 
-PlayerAnimationState PlayerPresentation::resolveState(const InputState& input) const
+PlayerAnimationState PlayerPresentation::resolveState(
+  const InputState& input,
+  const Engine& engine
+) const
 {
+  if (engine.isPlayerAttackInProgress())
+  {
+    return PlayerAnimationState::Attack;
+  }
+
+  if (!engine.playerIsGrounded() && engine.playerVelocityY() < 0.0f)
+  {
+    return PlayerAnimationState::Jump;
+  }
+
+  if (!engine.playerIsGrounded() && engine.playerVelocityY() > 0.0f)
+  {
+    return PlayerAnimationState::Fall;
+  }
+
   if ((input.leftPressed || input.rightPressed) && input.downPressed)
   {
     return PlayerAnimationState::DodgeMove;
@@ -60,12 +78,6 @@ PlayerAnimationState PlayerPresentation::resolveState(const InputState& input) c
   {
     return PlayerAnimationState::Dodge;
   }
-
-  if (input.jumpPressed)
-  {
-    return PlayerAnimationState::Jump;
-  }
-
   if (input.leftPressed || input.rightPressed)
   {
     return PlayerAnimationState::Run;

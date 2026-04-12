@@ -45,45 +45,76 @@ Engine::Engine(std::size_t stageWidth, std::size_t stageHeight):
 
 void Engine::update()
 {
-  updatePlayerAttackState();
+  updatePlayerAttackState(player_);
+  handlePlayerJump(player_);
   applyHorizontalMovement(player_);
   applyGravity(player_);
   updateEnemies();
   randEnemies();
 }
 
-void Engine::updatePlayerAttackState()
+void Engine::updatePlayerAttackState(Player& player)
 {
   constexpr int attackDurationTicks = 18;
 
-  if (!player_.attackInProgress())
+  if (!player.attackInProgress())
   {
-    if (player_.attackRequested())
+    if (player.attackRequested())
     {
-      player_.setAttackInProgress(true);
-      player_.setAttackTicksLeft(attackDurationTicks);
-      player_.setAttackRequested(false);
+      player.setAttackInProgress(true);
+      player.setAttackTicksLeft(attackDurationTicks);
+      player.setAttackRequested(false);
     }
     return;
   }
 
-  int ticksLeft = player_.attackTicksLeft();
+  int ticksLeft = player.attackTicksLeft();
   if (ticksLeft > 0)
   {
     --ticksLeft;
   }
-  player_.setAttackTicksLeft(ticksLeft);
+  player.setAttackTicksLeft(ticksLeft);
 
   if (ticksLeft <= 0)
   {
-    if (player_.attackHeld())
+    if (player.attackHeld())
     {
-      player_.setAttackTicksLeft(attackDurationTicks);
+      player.setAttackTicksLeft(attackDurationTicks);
     }
     else
     {
-      player_.setAttackInProgress(false);
+      player.setAttackInProgress(false);
     }
+  }
+}
+
+void Engine::handlePlayerJump(Player& player)
+{
+  constexpr float jumpImpulse = -3.2f;
+  constexpr float maxHoldTime = 0.12f;
+  constexpr float holdBoost = -0.09f;
+
+  if (player.jumpRequested() && player.isGrounded())
+  {
+    player.setVelocityY(jumpImpulse);
+    player.setIsGrounded(false);
+    player.setJumpHoldTime(0.0f);
+  }
+  player.setJumpRequested(false);
+
+  if (
+    !player.isGrounded() && 
+    player.jumpHeld() && 
+    player.velocityY() < 0.0f &&
+    player.jumpHoldTime() < maxHoldTime
+  )
+  {
+    player.setVelocityY(player.velocityY() + holdBoost);
+    player.setJumpHoldTime(player.jumpHoldTime() + (1.0f / 60.0f));
+  }
+
+  if (!player.jumpHeld() && player.velocityY() < -1.2f) {
+    player.setVelocityY(-1.2f);
   }
 }
 
@@ -116,6 +147,8 @@ void Engine::applyGravity(Player& player)
   if (player.isGrounded())
   {
     player.setVelocityY(0.0f);
+    player.setJumpHoldTime(0.0f);
+    
     playerPixelY_ = std::floor(playerPixelY_ / tileSizePx) * tileSizePx;
   }
   else
@@ -128,20 +161,38 @@ void Engine::applyGravity(Player& player)
     player.setVelocityY(vy);
 
     float remaining = player.velocityY();
-    while (remaining > 0.0f)
+    if (remaining > 0.0f)
     {
-      const float step = std::min(1.0f, remaining);
-      const float candidateY = playerPixelY_ + step;
-      if (isSolidBelowAtPixelY(candidateY))
+      while (remaining > 0.0f)
       {
-        player.setIsGrounded(true);
-        player.setVelocityY(0.0f);
-        break;
-      }
+        const float step = std::min(1.0f, remaining);
+        const float candidateY = playerPixelY_ + step;
+        if (isSolidBelowAtPixelY(candidateY))
+        {
+          player.setIsGrounded(true);
+          player.setVelocityY(0.0f);
+          break;
+        }
 
-      playerPixelY_ = candidateY;
-      player.setIsGrounded(false);
-      remaining -= step;
+        playerPixelY_ = candidateY;
+        player.setIsGrounded(false);
+        remaining -= step;
+      }
+    } else if (remaining < 0.0f)
+    {
+      while (remaining < 0.0f) {
+        const float step = std::max(-1.0f, remaining);
+        const float candidateY = playerPixelY_ + step;
+
+        // TODO: add ceiling collision check (similar to solid-below, but for top)
+        // if (isSolidAboveAtPixelY(candidateY)) {
+        //   player.setVelocityY(0.0f);
+        //   break;
+        // }
+
+        playerPixelY_ = candidateY;
+        remaining -= step; // step is negative
+      }
     }
   }
 

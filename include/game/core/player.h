@@ -11,76 +11,38 @@ private:
   Direction direction_;
   float velocityY_ = 0.0f;
   bool isGrounded_ = false;
+  bool jumpHeld_ = false;
+  bool jumpRequested_ = false;
+  float jumpHoldTime_ = 0.0f;
   bool attackHeld_ = false;
   bool attackRequested_ = false;
   bool attackInProgress_ = false;
   int attackTicksLeft_ = 0;
+
 public:
   Player();
-  Direction direction() const
-  {
-    return direction_;
-  }
-  void setDirection(Direction direction)
-  {
-    direction_ = direction;
-  }
-  bool isAlive() const
-  {
-    return isAlive_;
-  }
-  void setIsAlive(bool isAlive)
-  {
-    isAlive_ = isAlive;
-  }
-  float velocityY() const
-  {
-    return velocityY_;
-  }
-  void setVelocityY(float newVelocityY)
-  {
-    velocityY_ = newVelocityY;
-  }
-  bool isGrounded() const
-  {
-    return isGrounded_;
-  }
-  void setIsGrounded(bool newIsGrounded)
-  {
-    isGrounded_ = newIsGrounded;
-  }
-  bool attackHeld() const
-  {
-    return attackHeld_;
-  }
-  void setAttackHeld(bool attackHeld)
-  {
-    attackHeld_ = attackHeld;
-  }
-  bool attackRequested() const
-  {
-    return attackRequested_;
-  }
-  void setAttackRequested(bool attackRequested)
-  {
-    attackRequested_ = attackRequested;
-  }
-  bool attackInProgress() const
-  {
-    return attackInProgress_;
-  }
-  void setAttackInProgress(bool attackInProgress)
-  {
-    attackInProgress_ = attackInProgress;
-  }
-  int attackTicksLeft() const
-  {
-    return attackTicksLeft_;
-  }
-  void setAttackTicksLeft(int ticks)
-  {
-    attackTicksLeft_ = ticks;
-  }
+  Direction direction() const { return direction_; }
+  void setDirection(Direction v) { direction_ = v; }
+  bool isAlive() const { return isAlive_; }
+  void setIsAlive(bool v) { isAlive_ = v; }
+  float velocityY() const { return velocityY_; }
+  void setVelocityY(float v) { velocityY_ = v; }
+  bool isGrounded() const { return isGrounded_; }
+  void setIsGrounded(bool v) { isGrounded_ = v; }
+  bool jumpHeld() const { return jumpHeld_; }
+  void setJumpHeld(bool v) { jumpHeld_ = v; }
+  bool jumpRequested() const { return jumpRequested_; }
+  void setJumpRequested(bool v) { jumpRequested_ = v; }
+  float jumpHoldTime() const { return jumpHoldTime_; }
+  void setJumpHoldTime(float v) { jumpHoldTime_ = v; }
+  bool attackHeld() const { return attackHeld_; }
+  void setAttackHeld(bool v) { attackHeld_ = v; }
+  bool attackRequested() const { return attackRequested_; }
+  void setAttackRequested(bool v) { attackRequested_ = v; }
+  bool attackInProgress() const { return attackInProgress_; }
+  void setAttackInProgress(bool v) { attackInProgress_ = v; }
+  int attackTicksLeft() const { return attackTicksLeft_; }
+  void setAttackTicksLeft(int v) { attackTicksLeft_ = v; }
 };
 
 #endif // GAME_CORE_PLAYER_H

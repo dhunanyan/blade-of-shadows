@@ -23,7 +23,7 @@ public:
   }
 
 private:
-  PlayerAnimationState resolveState(const InputState& input) const;
+  PlayerAnimationState resolveState(const InputState& input, const Engine& engine) const;
   void setState(PlayerAnimationState nextState, bool isAttackActive);
 
 private:
