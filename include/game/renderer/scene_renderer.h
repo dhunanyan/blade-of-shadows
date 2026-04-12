@@ -1,7 +1,6 @@
 #ifndef GAME_RENDERER_SCENE_RENDERER_H
 #define GAME_RENDERER_SCENE_RENDERER_H
 
-#include <utility>
 #include <QPixmap>
 #include <QSize>
 
@@ -10,7 +9,6 @@ class AssetRepository;
 class TileMapper;
 class Engine;
 class PlayerPresentation;
-struct Position;
 class Enemy;
 
 class SceneRenderer
@@ -35,8 +33,6 @@ private:
       int playerScale) const;
   void drawEnemies(QPainter& painter, const Engine& engine, const AssetRepository& assets, int tileSizePx) const;
   void drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const;
-  QPoint positionToQPoint(Position position, int tileSizePx) const;
-  std::pair<QPoint, QPoint> positionToPairOfQPoints(Position position, int tileSizePx) const;
 };
 
 #endif // GAME_RENDERER_SCENE_RENDERER_H

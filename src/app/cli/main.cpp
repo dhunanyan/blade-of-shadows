@@ -51,16 +51,7 @@ int main(int argc, char** argv)
 
   for (std::size_t tick = 0; tick < ticks; ++tick)
   {
-    switch (tick % 2)
-    {
-      case 0:
-        engine.movePlayerRight();
-        break;
-      default:
-        engine.movePlayerLeft();
-        break;
-    }
-
+    engine.setPlayerMoveIntentX((tick % 2 == 0) ? 1 : -1);
     engine.update();
   }
 

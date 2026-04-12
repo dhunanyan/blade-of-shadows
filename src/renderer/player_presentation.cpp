@@ -13,26 +13,19 @@ PlayerPresentation::PlayerPresentation()
   animationController_.setClip(PlayerAnimationState::Run, AnimationClip{0.15, true});
 }
 
-void PlayerPresentation::update(const InputState& input, const AssetRepository& assets)
+void PlayerPresentation::update(const InputState& input, const Engine& engine, const AssetRepository& assets)
 {
-  if (input.attackJustPressed)
-  {
-    attackRequested_ = true;
-  }
-
-  setState(resolveState(input));
+  const bool attackActive = engine.isPlayerAttackInProgress();
+  setState(resolveState(input), attackActive);
 
   const int frameCount = static_cast<int>(assets.playerClip(currentState_).size());
   animationController_.tick(frameCount);
 
   if (currentState_ == PlayerAnimationState::Attack && frameCount > 0 &&
-      animationController_.isOneShotFinished(frameCount))
+      animationController_.isOneShotFinished(frameCount) &&
+      attackActive)
   {
-    attackInProgress_ = false;
-    if (input.attackPressed)
-    {
-      attackRequested_ = true;
-    }
+    animationController_.reset();
   }
 }
 
@@ -58,11 +51,6 @@ bool PlayerPresentation::isFacingLeft(Direction direction) const
 
 PlayerAnimationState PlayerPresentation::resolveState(const InputState& input) const
 {
-  if (attackInProgress_ || attackRequested_ || input.attackPressed)
-  {
-    return PlayerAnimationState::Attack;
-  }
-
   if ((input.leftPressed || input.rightPressed) && input.downPressed)
   {
     return PlayerAnimationState::DodgeMove;
@@ -73,7 +61,7 @@ PlayerAnimationState PlayerPresentation::resolveState(const InputState& input) c
     return PlayerAnimationState::Dodge;
   }
 
-  if (input.upPressed)
+  if (input.jumpPressed)
   {
     return PlayerAnimationState::Jump;
   }
@@ -86,26 +74,16 @@ PlayerAnimationState PlayerPresentation::resolveState(const InputState& input) c
   return PlayerAnimationState::Idle;
 }
 
-void PlayerPresentation::setState(PlayerAnimationState nextState)
+void PlayerPresentation::setState(PlayerAnimationState nextState, bool isAttackActive)
 {
-  if (currentState_ == nextState)
+  if (isAttackActive)
   {
-    if (currentState_ == PlayerAnimationState::Attack && !attackInProgress_ &&
-        (attackRequested_))
-    {
-      animationController_.reset();
-      attackInProgress_ = true;
-      attackRequested_ = false;
-    }
-    return;
+    nextState = PlayerAnimationState::Attack;
   }
 
-  currentState_ = nextState;
-  animationController_.setState(currentState_);
-
-  if (currentState_ == PlayerAnimationState::Attack)
+  if (currentState_ != nextState)
   {
-    attackInProgress_ = true;
-    attackRequested_ = false;
+    currentState_ = nextState;
+    animationController_.setState(currentState_);
   }
 }

@@ -5,8 +5,8 @@
 #include "game/app/qt/tilemapper.h"
 #include "game/core/enemy.h"
 #include "game/core/engine.h"
-#include "game/core/position.h"
 #include "game/renderer/asset_repository.h"
+#include "game/renderer/enemy_presentation.h"
 #include "game/renderer/player_presentation.h"
 
 QPixmap SceneRenderer::renderFrame(
@@ -80,7 +80,7 @@ void SceneRenderer::drawPlayer(
     frame = frame.transformed(QTransform().scale(-1, 1));
   }
 
-  const auto [topLeft, bottomRight] = positionToPairOfQPoints(engine.playerPosition(), tileSizePx);
+  const auto [topLeft, bottomRight] = EnemyPresentation::positionToRectPoints(engine.playerPosition(), tileSizePx);
   const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
   const QSize targetSize(cellSize.x() * playerScale, cellSize.y() * playerScale);
 
@@ -100,7 +100,7 @@ void SceneRenderer::drawEnemies(
 {
   for (const auto& enemy : engine.enemies())
   {
-    const auto [topLeft, bottomRight] = positionToPairOfQPoints(enemy->position(), tileSizePx);
+    const auto [topLeft, bottomRight] = EnemyPresentation::positionToRectPoints(enemy->position(), tileSizePx);
     const QRect enemyRect(topLeft, bottomRight);
     painter.drawPixmap(enemyRect, assets.enemyTexture());
     drawLifeBarAboveEnemy(painter, *enemy, tileSizePx);
@@ -109,25 +109,11 @@ void SceneRenderer::drawEnemies(
 
 void SceneRenderer::drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const
 {
-  const auto [enemyTopLeft, enemyBottomRight] = positionToPairOfQPoints(enemy.position(), tileSizePx);
+  const auto [enemyTopLeft, enemyBottomRight] = EnemyPresentation::positionToRectPoints(enemy.position(), tileSizePx);
   const QPoint cellSize = enemyBottomRight - enemyTopLeft;
-  const int lifeBarLength = std::abs(cellSize.x() * enemy.lifePercent() / 100);
+  const int lifeBarLength = EnemyPresentation::lifeBarLengthPx(cellSize.x(), static_cast<int>(enemy.lifePercent()));
   const QPoint lifeBarBottomRight(enemyTopLeft.x() + lifeBarLength, enemyTopLeft.y() + cellSize.y() / 10);
 
   painter.setBrush(Qt::red);
   painter.drawRect(QRect{enemyTopLeft, lifeBarBottomRight});
-}
-
-QPoint SceneRenderer::positionToQPoint(Position position, int tileSizePx) const
-{
-  const int x = static_cast<int>(position.x_) * tileSizePx;
-  const int y = static_cast<int>(position.y_) * tileSizePx;
-  return QPoint(x, y);
-}
-
-std::pair<QPoint, QPoint> SceneRenderer::positionToPairOfQPoints(Position position, int tileSizePx) const
-{
-  const QPoint from = positionToQPoint(position, tileSizePx);
-  const QPoint to = positionToQPoint(position.moveUpRight(), tileSizePx) - QPoint(1, 1);
-  return {from, to};
 }

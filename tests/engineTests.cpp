@@ -57,20 +57,30 @@ TEST_F(EngineTester, engineCanMovePlayer)
     ADD_FAILURE() << "Not implemented: UNIMPLEMENTED_engineCanMovePlayer";
 #else
     EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y >= static_cast<int>(height / 2) + 1;
+    });
 
-    const Position playerDefaultPosition(width/2, height/2);
-    const Direction playerDefaultDirection = Direction::RIGHT;
+    const float defaultX = engine.playerPixelX();
+    const float defaultY = engine.playerPixelY();
 
-    const Position playerAfterMovingRight(playerDefaultPosition.x()+1, playerDefaultPosition.y());
-    engine.movePlayerRight();
-    ASSERT_EQ(playerAfterMovingRight.x(), engine.playerPosition().x());
-    ASSERT_EQ(playerAfterMovingRight.y(), engine.playerPosition().y());
-    ASSERT_EQ(playerDefaultDirection, engine.playerDirection());
+    engine.setPlayerMoveIntentX(1);
+    for (int i = 0; i < 6; ++i)
+    {
+        engine.update();
+    }
+    ASSERT_GT(engine.playerPixelX(), defaultX);
+    ASSERT_EQ(Direction::RIGHT, engine.playerDirection());
 
-    const Position playerAfterMovingUp(playerAfterMovingRight.x(), playerAfterMovingRight.y()+1);
-    engine.movePlayerUp();
-    ASSERT_EQ(playerAfterMovingUp.x(), engine.playerPosition().x());
-    ASSERT_EQ(playerAfterMovingUp.y(), engine.playerPosition().y());
+    engine.setPlayerMoveIntentX(-1);
+    const float movedRightX = engine.playerPixelX();
+    for (int i = 0; i < 6; ++i)
+    {
+        engine.update();
+    }
+    ASSERT_LT(engine.playerPixelX(), movedRightX);
+    ASSERT_EQ(Direction::LEFT, engine.playerDirection());
+    ASSERT_EQ(defaultY, engine.playerPixelY());
 #endif
 }
 

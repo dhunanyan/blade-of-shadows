@@ -11,6 +11,10 @@ private:
   Direction direction_;
   float velocityY_ = 0.0f;
   bool isGrounded_ = false;
+  bool attackHeld_ = false;
+  bool attackRequested_ = false;
+  bool attackInProgress_ = false;
+  int attackTicksLeft_ = 0;
 public:
   Player();
   Direction direction() const
@@ -44,6 +48,38 @@ public:
   void setIsGrounded(bool newIsGrounded)
   {
     isGrounded_ = newIsGrounded;
+  }
+  bool attackHeld() const
+  {
+    return attackHeld_;
+  }
+  void setAttackHeld(bool attackHeld)
+  {
+    attackHeld_ = attackHeld;
+  }
+  bool attackRequested() const
+  {
+    return attackRequested_;
+  }
+  void setAttackRequested(bool attackRequested)
+  {
+    attackRequested_ = attackRequested;
+  }
+  bool attackInProgress() const
+  {
+    return attackInProgress_;
+  }
+  void setAttackInProgress(bool attackInProgress)
+  {
+    attackInProgress_ = attackInProgress;
+  }
+  int attackTicksLeft() const
+  {
+    return attackTicksLeft_;
+  }
+  void setAttackTicksLeft(int ticks)
+  {
+    attackTicksLeft_ = ticks;
   }
 };
 

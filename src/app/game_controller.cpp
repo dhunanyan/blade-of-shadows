@@ -14,6 +14,11 @@ void GameController::onKeyEvent(int key, bool isPressed, bool isAutoRepeat)
 void GameController::applyInput()
 {
   engine_.setPlayerMoveIntentX(input_.moveIntentX());
+  engine_.setPlayerAttackHeld(input_.attackPressed);
+  if (input_.attackJustPressed)
+  {
+    engine_.requestPlayerAttack();
+  }
 }
 
 void GameController::tick()

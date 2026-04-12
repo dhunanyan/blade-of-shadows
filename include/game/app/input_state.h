@@ -13,7 +13,8 @@ enum class InputAction
 
 struct InputState
 {
-  bool upPressed = false;
+  bool jumpPressed = false;
+  bool jumpJustPressed = false;
   bool downPressed = false;
   bool leftPressed = false;
   bool rightPressed = false;
@@ -25,7 +26,10 @@ struct InputState
     switch (action)
     {
     case InputAction::Up:
-      upPressed = isPressed;
+      if (isPressed && !isAutoRepeat && !jumpPressed) {
+        jumpJustPressed = true;
+      }
+      jumpPressed = isPressed;
       break;
     case InputAction::Down:
       downPressed = isPressed;
@@ -51,6 +55,7 @@ struct InputState
   void consumeOneShotSignals()
   {
     attackJustPressed = false;
+    jumpJustPressed = false;
   }
 
   int moveIntentX() const

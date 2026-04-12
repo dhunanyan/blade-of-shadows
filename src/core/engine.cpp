@@ -45,10 +45,46 @@ Engine::Engine(std::size_t stageWidth, std::size_t stageHeight):
 
 void Engine::update()
 {
+  updatePlayerAttackState();
   applyHorizontalMovement(player_);
   applyGravity(player_);
   updateEnemies();
   randEnemies();
+}
+
+void Engine::updatePlayerAttackState()
+{
+  constexpr int attackDurationTicks = 18;
+
+  if (!player_.attackInProgress())
+  {
+    if (player_.attackRequested())
+    {
+      player_.setAttackInProgress(true);
+      player_.setAttackTicksLeft(attackDurationTicks);
+      player_.setAttackRequested(false);
+    }
+    return;
+  }
+
+  int ticksLeft = player_.attackTicksLeft();
+  if (ticksLeft > 0)
+  {
+    --ticksLeft;
+  }
+  player_.setAttackTicksLeft(ticksLeft);
+
+  if (ticksLeft <= 0)
+  {
+    if (player_.attackHeld())
+    {
+      player_.setAttackTicksLeft(attackDurationTicks);
+    }
+    else
+    {
+      player_.setAttackInProgress(false);
+    }
+  }
 }
 
 void Engine::applyGravity(Player& player)
@@ -155,57 +191,6 @@ void Engine::updateEnemies()
       enemy->moveLeft();
     }
   }
-}
-
-void Engine::movePlayerUp()
-{
-  // TODO: Side-scroller mode: vertical movement is disabled for now (jump is planned).
-}
-
-void Engine::movePlayerDown()
-{
-  // TODO: Side-scroller mode: vertical movement is disabled for now (jump is planned).
-}
-
-void Engine::movePlayerLeft()
-{
-  player_.setDirection(Direction::LEFT);
-  Position next_position = Position(player_.position().x_ - 1, player_.position().y_);
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveLeft();
-}
-void Engine::movePlayerRight()
-{
-  player_.setDirection(Direction::RIGHT);
-  Position next_position = Position(player_.position().x_ + 1, player_.position().y_);
-  if(!stage_.isInside(next_position))
-  {
-    return;
-  }
-  player_.moveRight();
-}
-
-void Engine::movePlayerUpRight()
-{
-  // TODO: Side-scroller mode: diagonal movement is disabled for now.
-}
-
-void Engine::movePlayerUpLeft()
-{
-  // TODO: Side-scroller mode: diagonal movement is disabled for now.
-}
-
-void Engine::movePlayerDownRight()
-{
-  // TODO: Side-scroller mode: diagonal movement is disabled for now.
-}
-
-void Engine::movePlayerDownLeft()
-{
-  // TODO: Side-scroller mode: diagonal movement is disabled for now.
 }
 
 bool Engine::isSolidAt(int gridX, int gridY) const

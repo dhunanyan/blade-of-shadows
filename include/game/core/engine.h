@@ -71,14 +71,18 @@ public:
   {
     player_.setDirection(direction);
   }
-  void movePlayerUp();
-  void movePlayerDown();
-  void movePlayerLeft();
-  void movePlayerRight();
-  void movePlayerUpRight();
-  void movePlayerUpLeft();
-  void movePlayerDownRight();
-  void movePlayerDownLeft();
+  void requestPlayerAttack()
+  {
+    player_.setAttackRequested(true);
+  }
+  void setPlayerAttackHeld(bool isHeld)
+  {
+    player_.setAttackHeld(isHeld);
+  }
+  bool isPlayerAttackInProgress() const
+  {
+    return player_.attackInProgress();
+  }
   void setSolidQuery(std::function<bool(int, int)> solidQuery)
   {
     solidQuery_ = std::move(solidQuery);
@@ -95,6 +99,7 @@ public:
 protected:
   void randEnemies(Position (*positionGenerator)(int, int)=generateNewEnemyPosition);
   void updateEnemies();
+  void updatePlayerAttackState();
   void applyHorizontalMovement(Player& player);
   void syncPlayerGridPosition();
 

@@ -72,7 +72,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event)
 
 void MainWindow::update()
 {
-    playerPresentation_.update(gameController_.input(), assets_);
     gameController_.tick();
+    playerPresentation_.update(gameController_.input(), gameController_.engine(), assets_);
     redrawView();
 }
