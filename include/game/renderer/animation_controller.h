@@ -28,6 +28,7 @@ public:
   }
 
   bool isOneShotFinished(int frameCount) const;
+  void forceLastFrame(int frameCount);
   void reset();
 
 private:

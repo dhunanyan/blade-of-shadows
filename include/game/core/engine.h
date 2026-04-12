@@ -99,6 +99,7 @@ public:
   {
     return player_.velocityY();
   }
+  bool willPlayerTouchGroundSoon(float lookAheadPx) const;
   void setSolidQuery(std::function<bool(int, int)> solidQuery)
   {
     solidQuery_ = std::move(solidQuery);

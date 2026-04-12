@@ -64,6 +64,19 @@ bool AnimationController::isOneShotFinished(int frameCount) const
   return frameIndex_ >= frameCount - 1;
 }
 
+void AnimationController::forceLastFrame(int frameCount)
+{
+  if (frameCount <= 0)
+  {
+    frameIndex_ = 0;
+    frameAccumulator_ = 0.0;
+    return;
+  }
+
+  frameIndex_ = frameCount - 1;
+  frameAccumulator_ = 0.0;
+}
+
 void AnimationController::reset()
 {
   frameIndex_ = 0;

@@ -23,12 +23,42 @@ public:
   }
 
 private:
-  PlayerAnimationState resolveState(const InputState& input, const Engine& engine) const;
-  void setState(PlayerAnimationState nextState, bool isAttackActive);
+  enum class AirPhase
+  {
+    None,
+    JumpStart,
+    JumpLoop,
+    JumpEnd,
+    FallStart,
+    FallLoop,
+    FallEnd
+  };
+
+  struct ClipWindow
+  {
+    PlayerAnimationState state = PlayerAnimationState::Idle;
+    int from = 1;
+    int to = 1;
+    double framesPerTick = 0.1;
+    bool loop = true;
+  };
+
+  PlayerAnimationState resolveGroundedState(const InputState& input) const;
+  void setVisualWindow(const ClipWindow& window);
+  int windowFrameCount(const AssetRepository& assets) const;
+  void transitionToAirPhase(AirPhase nextPhase);
+  ClipWindow clipForAirPhase(AirPhase phase) const;
+  void updateAirPhase(const Engine& engine, int frameCount);
 
 private:
   AnimationController animationController_;
   PlayerAnimationState currentState_ = PlayerAnimationState::Idle;
+  AirPhase airPhase_ = AirPhase::None;
+  int activeFrameFrom_ = 1;
+  int activeFrameTo_ = 1;
+  double activeFramesPerTick_ = 0.1;
+  bool activeLoop_ = true;
+  bool wasGrounded_ = true;
 };
 
 #endif // GAME_RENDERER_PLAYER_PRESENTATION_H

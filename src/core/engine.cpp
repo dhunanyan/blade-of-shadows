@@ -121,8 +121,9 @@ void Engine::handlePlayerJump(Player& player)
 void Engine::applyGravity(Player& player)
 {
   constexpr float tileSizePx = 24.0f;
-  constexpr float gravity = 0.144f;
-  constexpr float maxFallSpeed = 1.28f;
+  constexpr float gravityUp = 0.144f;
+  constexpr float gravityDown = 0.320f;
+  constexpr float maxFallSpeed = 2.40f;
 
   auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
   {
@@ -148,15 +149,19 @@ void Engine::applyGravity(Player& player)
   {
     player.setVelocityY(0.0f);
     player.setJumpHoldTime(0.0f);
-    
     playerPixelY_ = std::floor(playerPixelY_ / tileSizePx) * tileSizePx;
   }
   else
   {
+    const float gravity = (player.velocityY() < 0.0f) ? gravityUp : gravityDown;
     float vy = player.velocityY() + gravity;
     if (vy > maxFallSpeed)
     {
       vy = maxFallSpeed;
+    }
+    if (std::abs(vy) < 0.05f)
+    {
+      vy = 0.0f;
     }
     player.setVelocityY(vy);
 
@@ -248,6 +253,33 @@ bool Engine::isSolidAt(int gridX, int gridY) const
 {
   if (!solidQuery_) return false;
   return solidQuery_(gridX, gridY);
+}
+
+bool Engine::willPlayerTouchGroundSoon(float lookAheadPx) const
+{
+  constexpr float tileSizePx = 24.0f;
+  const float safeLookAheadPx = std::max(0.0f, lookAheadPx);
+
+  auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
+  {
+    if (pixelY < 0.0f)
+    {
+      return false;
+    }
+
+    const int topCell = static_cast<int>(std::floor(pixelY / tileSizePx));
+    const int belowCellY = topCell + 1;
+    if (belowCellY >= static_cast<int>(stage_.height()))
+    {
+      return true;
+    }
+
+    const int leftCellX = static_cast<int>(std::floor(playerPixelX_ / tileSizePx));
+    const int rightCellX = static_cast<int>(std::floor((playerPixelX_ + tileSizePx - 1.0f) / tileSizePx));
+    return isSolidAt(leftCellX, belowCellY) || isSolidAt(rightCellX, belowCellY);
+  };
+
+  return isSolidBelowAtPixelY(playerPixelY_ + safeLookAheadPx);
 }
 
 void Engine::applyHorizontalMovement(Player& player)
