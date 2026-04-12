@@ -56,11 +56,6 @@ bool PlayerPresentation::isFacingLeft(Direction direction) const
          direction == Direction::DOWNER_LEFT;
 }
 
-PlayerAnimationState PlayerPresentation::state() const
-{
-  return currentState_;
-}
-
 PlayerAnimationState PlayerPresentation::resolveState(const InputState& input) const
 {
   if (attackInProgress_ || attackRequested_ || input.attackPressed)

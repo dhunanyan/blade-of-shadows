@@ -1,5 +1,5 @@
-#ifndef OBJECT_H
-#define OBJECT_H
+#ifndef GAME_CORE_OBJECT_H
+#define GAME_CORE_OBJECT_H
 
 #include "game/core/position.h"
 
@@ -41,4 +41,4 @@ public:
   }
 };
 
-#endif // OBJECT_H
+#endif // GAME_CORE_OBJECT_H

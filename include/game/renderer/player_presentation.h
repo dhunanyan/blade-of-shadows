@@ -16,7 +16,10 @@ public:
   void update(const InputState& input, const AssetRepository& assets);
   QPixmap currentFrame(const AssetRepository& assets) const;
   bool isFacingLeft(Direction direction) const;
-  PlayerAnimationState state() const;
+  PlayerAnimationState state() const
+  {
+    return currentState_;
+  }
 
 private:
   PlayerAnimationState resolveState(const InputState& input) const;

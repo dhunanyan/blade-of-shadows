@@ -35,36 +35,6 @@ bool AssetRepository::loadAll()
   return ok;
 }
 
-const QPixmap& AssetRepository::backgroundLayer1() const
-{
-  return backgroundLayer1_;
-}
-
-const QPixmap& AssetRepository::backgroundLayer2() const
-{
-  return backgroundLayer2_;
-}
-
-const QPixmap& AssetRepository::backgroundLayer3() const
-{
-  return backgroundLayer3_;
-}
-
-const QPixmap& AssetRepository::enemyTexture() const
-{
-  return enemyTexture_;
-}
-
-const std::vector<QPixmap>& AssetRepository::playerClip(PlayerAnimationState state) const
-{
-  auto it = playerClips_.find(state);
-  if (it == playerClips_.end())
-  {
-    return emptyClip();
-  }
-  return it->second;
-}
-
 std::vector<QPixmap> AssetRepository::loadFrames(const std::vector<QString>& resourcePaths) const
 {
   std::vector<QPixmap> frames;

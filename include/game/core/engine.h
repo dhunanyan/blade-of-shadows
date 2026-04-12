@@ -1,8 +1,9 @@
-#ifndef ENGINE_H
-#define ENGINE_H
+#ifndef GAME_CORE_ENGINE_H
+#define GAME_CORE_ENGINE_H
 
 #include <algorithm>
 #include <functional>
+#include <utility>
 #include <vector>
 #include <memory> // std::shared_ptr && std::unique_ptr
 #include "game/core/direction.h"
@@ -78,7 +79,10 @@ public:
   void movePlayerUpLeft();
   void movePlayerDownRight();
   void movePlayerDownLeft();
-  void setSolidQuery(std::function<bool(int, int)> solidQuery);
+  void setSolidQuery(std::function<bool(int, int)> solidQuery)
+  {
+    solidQuery_ = std::move(solidQuery);
+  }
   void applyGravity(Player& player);
   void applyGravity(Enemy& enemy);
 
@@ -109,4 +113,4 @@ private:
   int playerMoveIntentX_ = 0;
 };
 
-#endif // ENGINE_H
+#endif // GAME_CORE_ENGINE_H

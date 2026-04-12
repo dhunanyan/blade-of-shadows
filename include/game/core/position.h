@@ -1,5 +1,5 @@
-#ifndef POSITION_H
-#define POSITION_H
+#ifndef GAME_CORE_POSITION_H
+#define GAME_CORE_POSITION_H
 
 #include <cstddef>  // std::size_t
 
@@ -53,4 +53,4 @@ struct Position
   }
 };
 
-#endif // POSITION_H
+#endif // GAME_CORE_POSITION_H

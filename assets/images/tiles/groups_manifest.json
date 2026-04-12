@@ -1,5 +1,5 @@
 {
-  "source": "/Users/dhunanyan/studies/cpp/pp2-lab14-game/assets/images/tiles/tileset.png",
+  "source": "./assets/images/tiles/tileset.png",
   "tile_size": [24, 24],
   "grid_size": [21, 15],
   "groups": [

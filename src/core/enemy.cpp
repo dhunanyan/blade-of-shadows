@@ -8,19 +8,11 @@ Enemy::Enemy(Position position, float maxLife)
     lastMoveTime_(std::chrono::steady_clock::now())
   {}
 Enemy::Enemy(Position position): Enemy(position, MAX_LIFE) {}
-float Enemy::lifePercent() const
-{
-  return (life_ / maxLife_) * 100.0f;
-}
 bool Enemy::shouldIMoveThisTime() const
 {
     auto currentTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastMoveTime_);
     return elapsedTime >= moveInterval_;
-}
-bool Enemy::isAlive() const
-{
-  return lifePercent() > 0;
 }
 void Enemy::decreaseLife(float damage)
 {

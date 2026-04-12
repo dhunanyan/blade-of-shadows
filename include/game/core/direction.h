@@ -1,5 +1,5 @@
-#ifndef DIRECTION_H
-#define DIRECTION_H
+#ifndef GAME_CORE_DIRECTION_H
+#define GAME_CORE_DIRECTION_H
 
 #include <cstdint> // std::uint8_t
 
@@ -18,4 +18,4 @@ enum class Direction : std::uint8_t
   UNKNOWN
 };
 
-#endif // DIRECTION_H
+#endif // GAME_CORE_DIRECTION_H

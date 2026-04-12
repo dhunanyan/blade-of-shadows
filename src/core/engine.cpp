@@ -51,11 +51,6 @@ void Engine::update()
   randEnemies();
 }
 
-void Engine::setSolidQuery(std::function<bool(int, int)> solidQuery)
-{
-  solidQuery_ = std::move(solidQuery);
-}
-
 void Engine::applyGravity(Player& player)
 {
   constexpr float tileSizePx = 24.0f;

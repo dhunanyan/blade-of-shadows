@@ -1,5 +1,5 @@
-#ifndef PLAYER_H
-#define PLAYER_H
+#ifndef GAME_CORE_PLAYER_H
+#define GAME_CORE_PLAYER_H
 
 #include "game/core/object.h"
 #include "game/core/direction.h"
@@ -47,4 +47,4 @@ public:
   }
 };
 
-#endif // PLAYER_H
+#endif // GAME_CORE_PLAYER_H

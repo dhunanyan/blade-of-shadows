@@ -1,5 +1,5 @@
-#ifndef ENEMY_H
-#define ENEMY_H
+#ifndef GAME_CORE_ENEMY_H
+#define GAME_CORE_ENEMY_H
 
 #include <chrono>
 #include "game/core/object.h"
@@ -15,9 +15,15 @@ private:
 public:
   Enemy(Position position);
   Enemy(Position position, float maxLife);
-  float lifePercent() const;
+  float lifePercent() const
+  {
+    return (life_ / maxLife_) * 100.0f;
+  }
   bool shouldIMoveThisTime() const;
-  bool isAlive() const;
+  bool isAlive() const
+  {
+    return lifePercent() > 0;
+  }
   void decreaseLife(float damage);
   void moveLeft();
   void moveUp();
@@ -45,4 +51,4 @@ public:
   }
 };
 
-#endif // ENEMY_H
+#endif // GAME_CORE_ENEMY_H

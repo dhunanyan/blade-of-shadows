@@ -1,5 +1,5 @@
-#ifndef STAGE_H
-#define STAGE_H
+#ifndef GAME_CORE_STAGE_H
+#define GAME_CORE_STAGE_H
 
 #include <memory>
 #include <utility>
@@ -39,4 +39,4 @@ public:
   }
 };
 
-#endif // STAGE_H
+#endif // GAME_CORE_STAGE_H

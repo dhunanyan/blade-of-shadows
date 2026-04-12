@@ -1,5 +1,5 @@
-#ifndef PLAYER_ANIMATION_STATE_H
-#define PLAYER_ANIMATION_STATE_H
+#ifndef GAME_RENDERER_PLAYER_ANIMATION_STATE_H
+#define GAME_RENDERER_PLAYER_ANIMATION_STATE_H
 
 #include <cstdint> // std::uint8_t
 
@@ -16,4 +16,4 @@ enum class PlayerAnimationState : std::uint8_t
   Run,
 };
 
-#endif // PLAYER_ANIMATION_STATE_H
+#endif // GAME_RENDERER_PLAYER_ANIMATION_STATE_H
