@@ -1,7 +1,10 @@
 #include "game/renderer/scene_renderer.h"
 #include <cmath>
+#include <QFont>
 #include <QPainter>
+#include <QPen>
 #include <QTransform>
+#include "game/app/menu_system.h"
 #include "game/app/qt/tilemapper.h"
 #include "game/core/enemy.h"
 #include "game/core/engine.h"
@@ -14,6 +17,7 @@ QPixmap SceneRenderer::renderFrame(
     const TileMapper& tileMapper,
     const AssetRepository& assets,
     const PlayerPresentation& playerPresentation,
+    const MenuView& menuView,
     int tileSizePx,
     int playerScale) const
 {
@@ -37,6 +41,7 @@ QPixmap SceneRenderer::renderFrame(
   tileMapper.render(painter, tileSizePx);
   drawPlayer(painter, engine, playerPresentation, assets, tileSizePx, playerScale);
   drawEnemies(painter, engine, assets, tileSizePx);
+  drawMenuOverlay(painter, targetSize, menuView);
 
   return composed;
 }
@@ -117,4 +122,60 @@ void SceneRenderer::drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy,
 
   painter.setBrush(Qt::red);
   painter.drawRect(QRect{enemyTopLeft, lifeBarBottomRight});
+}
+
+void SceneRenderer::drawMenuOverlay(QPainter& painter, const QSize& targetSize, const MenuView& menuView) const
+{
+  if (!menuView.visible)
+  {
+    return;
+  }
+
+  painter.save();
+
+  painter.fillRect(QRect(QPoint(0, 0), targetSize), QColor(0, 0, 0, 150));
+
+  const int panelWidth = targetSize.width() * 2 / 5;
+  const int panelHeight = targetSize.height() * 3 / 5;
+  const int panelX = (targetSize.width() - panelWidth) / 2;
+  const int panelY = (targetSize.height() - panelHeight) / 2;
+  const QRect panelRect(panelX, panelY, panelWidth, panelHeight);
+
+  painter.setPen(QPen(QColor(220, 220, 220), 2));
+  painter.setBrush(QColor(24, 24, 24, 220));
+  painter.drawRoundedRect(panelRect, 12, 12);
+
+  QFont titleFont = painter.font();
+  titleFont.setPointSize(20);
+  titleFont.setBold(true);
+  painter.setFont(titleFont);
+  painter.setPen(Qt::white);
+  painter.drawText(panelRect.adjusted(0, 16, 0, 0), Qt::AlignTop | Qt::AlignHCenter, QString::fromStdString(menuView.title));
+
+  QFont itemFont = painter.font();
+  itemFont.setPointSize(14);
+  itemFont.setBold(false);
+  painter.setFont(itemFont);
+
+  const int itemStartY = panelY + 80;
+  const int itemStep = 40;
+  for (int index = 0; index < static_cast<int>(menuView.items.size()); ++index)
+  {
+    const QRect itemRect(panelX + 24, itemStartY + index * itemStep, panelWidth - 48, 30);
+    if (index == menuView.selectedIndex)
+    {
+      painter.setPen(Qt::NoPen);
+      painter.setBrush(QColor(90, 90, 90, 190));
+      painter.drawRoundedRect(itemRect.adjusted(-8, -2, 8, 2), 8, 8);
+      painter.setPen(QColor(255, 225, 120));
+    }
+    else
+    {
+      painter.setPen(Qt::white);
+    }
+
+    painter.drawText(itemRect, Qt::AlignVCenter | Qt::AlignLeft, QString::fromStdString(menuView.items[static_cast<std::size_t>(index)]));
+  }
+
+  painter.restore();
 }

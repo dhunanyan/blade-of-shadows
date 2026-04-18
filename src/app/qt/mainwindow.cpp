@@ -45,6 +45,7 @@ void MainWindow::redrawView()
         tileMapper_,
         assets_,
         playerPresentation_,
+        gameController_.menuView(),
         tileSizePx_,
         playerScale_);
     ui_->background->setPixmap(frame);
@@ -52,14 +53,6 @@ void MainWindow::redrawView()
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
 {
-    if (event->key() == Qt::Key_Escape)
-    {
-        qDebug() << "Esc pressed, goodbye";
-        close();
-        qApp->quit();
-        return;
-    }
-
     gameController_.onKeyEvent(event->key(), true, event->isAutoRepeat());
     QMainWindow::keyPressEvent(event);
 }
@@ -75,4 +68,11 @@ void MainWindow::update()
     gameController_.tick();
     playerPresentation_.update(gameController_.input(), gameController_.engine(), assets_);
     redrawView();
+
+    if (gameController_.shouldQuit())
+    {
+        qDebug() << "Quit requested from menu.";
+        close();
+        qApp->quit();
+    }
 }

@@ -28,8 +28,10 @@ if (DEFINED QT_PACKAGE_PREFIX)
         ${CMAKE_SOURCE_DIR}/include/game/app/game_controller.h
         ${CMAKE_SOURCE_DIR}/include/game/app/input_mapper.h
         ${CMAKE_SOURCE_DIR}/include/game/app/input_state.h
+        ${CMAKE_SOURCE_DIR}/include/game/app/menu_system.h
         ${CMAKE_SOURCE_DIR}/src/app/game_controller.cpp
         ${CMAKE_SOURCE_DIR}/src/app/input_mapper.cpp
+        ${CMAKE_SOURCE_DIR}/src/app/menu_system.cpp
         ${CMAKE_SOURCE_DIR}/include/game/renderer/player_animation_state.h
         ${CMAKE_SOURCE_DIR}/include/game/renderer/asset_repository.h
         ${CMAKE_SOURCE_DIR}/include/game/renderer/animation_controller.h

@@ -57,6 +57,16 @@ struct InputState
     attackJustPressed = false;
     jumpJustPressed = false;
   }
+  void resetAll()
+  {
+    jumpPressed = false;
+    jumpJustPressed = false;
+    downPressed = false;
+    leftPressed = false;
+    rightPressed = false;
+    attackPressed = false;
+    attackJustPressed = false;
+  }
 
   int moveIntentX() const
   {

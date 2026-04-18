@@ -10,6 +10,7 @@ class TileMapper;
 class Engine;
 class PlayerPresentation;
 class Enemy;
+struct MenuView;
 
 class SceneRenderer
 {
@@ -19,6 +20,7 @@ public:
       const TileMapper& tileMapper,
       const AssetRepository& assets,
       const PlayerPresentation& playerPresentation,
+      const MenuView& menuView,
       int tileSizePx,
       int playerScale) const;
 
@@ -33,6 +35,7 @@ private:
       int playerScale) const;
   void drawEnemies(QPainter& painter, const Engine& engine, const AssetRepository& assets, int tileSizePx) const;
   void drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const;
+  void drawMenuOverlay(QPainter& painter, const QSize& targetSize, const MenuView& menuView) const;
 };
 
 #endif // GAME_RENDERER_SCENE_RENDERER_H
