@@ -16,6 +16,7 @@ private:
   QPixmap enemyTexture_;
 
   std::unordered_map<PlayerAnimationState, std::vector<QPixmap>> playerClips_;
+  std::unordered_map<PlayerAnimationState, std::vector<QPixmap>> playerAttackVariantClips_;
   std::vector<QPixmap> emptyClip_;
 
   std::vector<QPixmap> loadFrames(const std::vector<QString>& resourcePaths) const;
@@ -44,6 +45,15 @@ public:
   {
     const auto it = playerClips_.find(state);
     if (it == playerClips_.end())
+    {
+      return emptyClip();
+    }
+    return it->second;
+  }
+  const std::vector<QPixmap>& playerAttackVariantClip(PlayerAnimationState state) const
+  {
+    const auto it = playerAttackVariantClips_.find(state);
+    if (it == playerAttackVariantClips_.end())
     {
       return emptyClip();
     }

@@ -7,15 +7,27 @@ bool AssetRepository::loadAll()
   backgroundLayer3_.load(QString::fromUtf8(":/background_layer_3.png"));
   enemyTexture_.load(QString::fromUtf8(":/enemy.png"));
 
-  playerClips_[PlayerAnimationState::Attack] = loadFrameRange(QString::fromUtf8(":/player/attack"), 1, 6);
   playerClips_[PlayerAnimationState::Damage] = loadFrameRange(QString::fromUtf8(":/player/damage"), 1, 8);
   playerClips_[PlayerAnimationState::Death] = loadFrameRange(QString::fromUtf8(":/player/death"), 1, 4);
-  playerClips_[PlayerAnimationState::Dodge] = loadFrameRange(QString::fromUtf8(":/player/dodge"), 1, 1);
+  playerClips_[PlayerAnimationState::Dodge] = loadFrameRange(QString::fromUtf8(":/player/dodge"), 1, 3);
   playerClips_[PlayerAnimationState::DodgeMove] = loadFrameRange(QString::fromUtf8(":/player/dodge-move"), 1, 3);
   playerClips_[PlayerAnimationState::Fall] = loadFrameRange(QString::fromUtf8(":/player/fall"), 1, 8);
   playerClips_[PlayerAnimationState::Idle] = loadFrameRange(QString::fromUtf8(":/player/idle"), 1, 6);
   playerClips_[PlayerAnimationState::Jump] = loadFrameRange(QString::fromUtf8(":/player/jump"), 1, 8);
   playerClips_[PlayerAnimationState::Run] = loadFrameRange(QString::fromUtf8(":/player/run"), 1, 8);
+
+  playerAttackVariantClips_[PlayerAnimationState::Dodge] =
+      loadFrameRange(QString::fromUtf8(":/player/dodge-attack"), 1, 3);
+  playerAttackVariantClips_[PlayerAnimationState::DodgeMove] =
+      loadFrameRange(QString::fromUtf8(":/player/dodge-move-attack"), 1, 3);
+  playerAttackVariantClips_[PlayerAnimationState::Fall] =
+      loadFrameRange(QString::fromUtf8(":/player/fall-attack"), 1, 8);
+  playerAttackVariantClips_[PlayerAnimationState::Idle] =
+      loadFrameRange(QString::fromUtf8(":/player/idle-attack"), 1, 6);
+  playerAttackVariantClips_[PlayerAnimationState::Jump] =
+      loadFrameRange(QString::fromUtf8(":/player/jump-attack"), 1, 8);
+  playerAttackVariantClips_[PlayerAnimationState::Run] =
+      loadFrameRange(QString::fromUtf8(":/player/run-attack"), 1, 8);
 
   bool ok = !backgroundLayer1_.isNull() &&
             !backgroundLayer2_.isNull() &&
@@ -23,6 +35,15 @@ bool AssetRepository::loadAll()
             !enemyTexture_.isNull();
 
   for (const auto& [state, clip] : playerClips_)
+  {
+    (void)state;
+    if (clip.empty())
+    {
+      ok = false;
+      break;
+    }
+  }
+  for (const auto& [state, clip] : playerAttackVariantClips_)
   {
     (void)state;
     if (clip.empty())

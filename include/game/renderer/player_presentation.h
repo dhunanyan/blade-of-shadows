@@ -49,6 +49,8 @@ private:
   void transitionToAirPhase(AirPhase nextPhase);
   ClipWindow clipForAirPhase(AirPhase phase) const;
   void updateAirPhase(const Engine& engine, int frameCount);
+  int currentWindowFrameIndex(const std::vector<QPixmap>& clip) const;
+  int currentAttackFrameIndex(const std::vector<QPixmap>& clip) const;
 
 private:
   AnimationController animationController_;
@@ -59,6 +61,9 @@ private:
   double activeFramesPerTick_ = 0.1;
   bool activeLoop_ = true;
   bool wasGrounded_ = true;
+  AnimationController attackAnimationController_;
+  bool attackVisualActive_ = false;
+  int previousAttackTicksLeft_ = 0;
 };
 
 #endif // GAME_RENDERER_PLAYER_PRESENTATION_H

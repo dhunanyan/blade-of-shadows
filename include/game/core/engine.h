@@ -83,6 +83,10 @@ public:
   {
     return player_.attackInProgress();
   }
+  int playerAttackTicksLeft() const
+  {
+    return player_.attackTicksLeft();
+  }
   void requestPlayerJump()
   {
     player_.setJumpRequested(true);

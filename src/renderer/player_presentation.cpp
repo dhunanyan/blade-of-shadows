@@ -9,109 +9,111 @@ PlayerPresentation::PlayerPresentation()
       6,
       0.067,
       true});
+  attackAnimationController_.setClip(PlayerAnimationState::Attack, AnimationClip{0.33, false});
+  attackAnimationController_.setState(PlayerAnimationState::Attack);
 }
 
 void PlayerPresentation::update(const InputState& input, const Engine& engine, const AssetRepository& assets)
 {
   const bool attackActive = engine.isPlayerAttackInProgress();
+  const int attackTicksLeft = engine.playerAttackTicksLeft();
   const bool grounded = engine.playerIsGrounded();
-
-  if (attackActive)
+  if (!grounded && airPhase_ == AirPhase::None)
   {
-    airPhase_ = AirPhase::None;
-    setVisualWindow(ClipWindow{
-        PlayerAnimationState::Attack,
-        1,
-        static_cast<int>(assets.playerClip(PlayerAnimationState::Attack).size()),
-        0.33,
-        false});
-  }
-  else
-  {
-    if (!grounded && airPhase_ == AirPhase::None)
+    const float vy = engine.playerVelocityY();
+    if (vy < 0.0f)
     {
-      const float vy = engine.playerVelocityY();
-      if (vy < 0.0f)
-      {
-        transitionToAirPhase(AirPhase::JumpStart);
-      }
-      else
-      {
-        transitionToAirPhase(AirPhase::FallStart);
-      }
-    }
-
-    if (airPhase_ != AirPhase::None)
-    {
-      setVisualWindow(clipForAirPhase(airPhase_));
+      transitionToAirPhase(AirPhase::JumpStart);
     }
     else
     {
-      const PlayerAnimationState groundedState = resolveGroundedState(input);
-      switch (groundedState)
-      {
-      case PlayerAnimationState::DodgeMove:
-        setVisualWindow(ClipWindow{PlayerAnimationState::DodgeMove, 1, 3, 0.20, true});
-        break;
-      case PlayerAnimationState::Dodge:
-        setVisualWindow(ClipWindow{PlayerAnimationState::Dodge, 1, 1, 0.20, true});
-        break;
-      case PlayerAnimationState::Run:
-        setVisualWindow(ClipWindow{PlayerAnimationState::Run, 1, 8, 0.15, true});
-        break;
-      case PlayerAnimationState::Idle:
-      default:
-        setVisualWindow(ClipWindow{PlayerAnimationState::Idle, 1, 6, 0.067, true});
-        break;
-      }
+      transitionToAirPhase(AirPhase::FallStart);
+    }
+  }
+
+  if (airPhase_ != AirPhase::None)
+  {
+    setVisualWindow(clipForAirPhase(airPhase_));
+  }
+  else
+  {
+    const PlayerAnimationState groundedState = resolveGroundedState(input);
+    switch (groundedState)
+    {
+    case PlayerAnimationState::DodgeMove:
+      setVisualWindow(ClipWindow{PlayerAnimationState::DodgeMove, 1, 3, 0.20, true});
+      break;
+    case PlayerAnimationState::Dodge:
+      setVisualWindow(ClipWindow{PlayerAnimationState::Dodge, 1, 3, 0.20, true});
+      break;
+    case PlayerAnimationState::Run:
+      setVisualWindow(ClipWindow{PlayerAnimationState::Run, 1, 8, 0.15, true});
+      break;
+    case PlayerAnimationState::Idle:
+    default:
+      setVisualWindow(ClipWindow{PlayerAnimationState::Idle, 1, 6, 0.067, true});
+      break;
     }
   }
 
   const int frameCount = windowFrameCount(assets);
   animationController_.tick(frameCount);
 
-  if (currentState_ == PlayerAnimationState::Attack && frameCount > 0 &&
-      animationController_.isOneShotFinished(frameCount) && attackActive)
-  {
-    animationController_.reset();
-  }
-
-  if (!attackActive && airPhase_ != AirPhase::None)
+  if (airPhase_ != AirPhase::None)
   {
     updateAirPhase(engine, frameCount);
   }
 
   wasGrounded_ = grounded;
+
+  if (attackActive)
+  {
+    if (!attackVisualActive_ || attackTicksLeft > previousAttackTicksLeft_)
+    {
+      attackAnimationController_.reset();
+    }
+
+    const int attackFrameCount =
+        static_cast<int>(assets.playerAttackVariantClip(currentState_).size());
+    attackAnimationController_.tick(attackFrameCount);
+    attackVisualActive_ = true;
+  }
+  else
+  {
+    attackVisualActive_ = false;
+  }
+
+  previousAttackTicksLeft_ = attackTicksLeft;
 }
 
 QPixmap PlayerPresentation::currentFrame(const AssetRepository& assets) const
 {
-  const auto& clip = assets.playerClip(currentState_);
+  const auto& baseClip = assets.playerClip(currentState_);
+  if (baseClip.empty())
+  {
+    return QPixmap();
+  }
+
+  const std::vector<QPixmap>* selectedClip = &baseClip;
+  if (attackVisualActive_)
+  {
+    const auto& attackVariantClip = assets.playerAttackVariantClip(currentState_);
+    if (!attackVariantClip.empty())
+    {
+      selectedClip = &attackVariantClip;
+    }
+  }
+
+  const auto& clip = *selectedClip;
   if (clip.empty())
   {
     return QPixmap();
   }
 
-  const int clipSize = static_cast<int>(clip.size());
-  const int start = std::clamp(activeFrameFrom_ - 1, 0, clipSize - 1);
-  const int end = std::clamp(activeFrameTo_ - 1, start, clipSize - 1);
-  const int frameCount = end - start + 1;
-  if (frameCount <= 0)
-  {
-    return QPixmap();
-  }
-
-  int localIndex = animationController_.frameIndex();
-  if (activeLoop_)
-  {
-    localIndex %= frameCount;
-  }
-  else
-  {
-    localIndex = std::min(localIndex, frameCount - 1);
-  }
-
-  return clip[static_cast<std::size_t>(start + localIndex)];
+  const int frameIndex = (attackVisualActive_ && selectedClip != &baseClip)
+                             ? currentAttackFrameIndex(clip)
+                             : currentWindowFrameIndex(clip);
+  return clip[static_cast<std::size_t>(frameIndex)];
 }
 
 bool PlayerPresentation::isFacingLeft(Direction direction) const
@@ -187,6 +189,47 @@ int PlayerPresentation::windowFrameCount(const AssetRepository& assets) const
   const int start = std::clamp(activeFrameFrom_ - 1, 0, clipSize - 1);
   const int end = std::clamp(activeFrameTo_ - 1, start, clipSize - 1);
   return end - start + 1;
+}
+
+int PlayerPresentation::currentWindowFrameIndex(const std::vector<QPixmap>& clip) const
+{
+  if (clip.empty())
+  {
+    return 0;
+  }
+
+  const int clipSize = static_cast<int>(clip.size());
+  const int start = std::clamp(activeFrameFrom_ - 1, 0, clipSize - 1);
+  const int end = std::clamp(activeFrameTo_ - 1, start, clipSize - 1);
+  const int frameCount = end - start + 1;
+  if (frameCount <= 0)
+  {
+    return start;
+  }
+
+  int localIndex = animationController_.frameIndex();
+  if (activeLoop_)
+  {
+    localIndex %= frameCount;
+  }
+  else
+  {
+    localIndex = std::min(localIndex, frameCount - 1);
+  }
+
+  return start + localIndex;
+}
+
+int PlayerPresentation::currentAttackFrameIndex(const std::vector<QPixmap>& clip) const
+{
+  if (clip.empty())
+  {
+    return 0;
+  }
+
+  const int frameCount = static_cast<int>(clip.size());
+  const int frameIndex = std::clamp(attackAnimationController_.frameIndex(), 0, frameCount - 1);
+  return frameIndex;
 }
 
 void PlayerPresentation::transitionToAirPhase(AirPhase nextPhase)

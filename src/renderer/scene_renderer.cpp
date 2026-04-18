@@ -75,7 +75,8 @@ void SceneRenderer::drawPlayer(
     return;
   }
 
-  if (playerPresentation.isFacingLeft(engine.playerDirection()))
+  const bool facingLeft = playerPresentation.isFacingLeft(engine.playerDirection());
+  if (facingLeft)
   {
     frame = frame.transformed(QTransform().scale(-1, 1));
   }
