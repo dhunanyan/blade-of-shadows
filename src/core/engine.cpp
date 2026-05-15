@@ -45,6 +45,10 @@ Engine::Engine(std::size_t stageWidth, std::size_t stageHeight):
 
 void Engine::update()
 {
+  if (player_.doubleJumpFxTicks() > 0)
+  {
+    player_.setDoubleJumpFxTicks(player_.doubleJumpFxTicks() - 1);
+  }
   updatePlayerAttackState(player_);
   handlePlayerJump(player_);
   applyHorizontalMovement(player_);
@@ -90,17 +94,43 @@ void Engine::updatePlayerAttackState(Player& player)
 
 void Engine::handlePlayerJump(Player& player)
 {
-  constexpr float jumpImpulse = -3.2f;
-  constexpr float maxHoldTime = 0.12f;
-  constexpr float holdBoost = -0.09f;
+  constexpr float groundJumpImpulse = -3.8f;
+  constexpr float airJumpImpulse = -3.2f;
+  constexpr float groundMaxHoldTime = 0.15f;
+  constexpr float airMaxHoldTime = 0.10f;
+  constexpr float groundHoldBoost = -0.08f;
+  constexpr float airHoldBoost = -0.06f;
+  constexpr int maxAirJumps = 1;
+  constexpr int doubleJumpFxDurationTicks = 16;
 
-  if (player.jumpRequested() && player.isGrounded())
+  if (player.isGrounded())
   {
-    player.setVelocityY(jumpImpulse);
-    player.setIsGrounded(false);
-    player.setJumpHoldTime(0.0f);
+    player.setRemainingAirJumps(maxAirJumps);
+  }
+
+  if (player.jumpRequested())
+  {
+    const bool canJumpFromGround = player.isGrounded();
+    const bool canJumpInAir = !player.isGrounded() && player.remainingAirJumps() > 0;
+
+    if (canJumpFromGround || canJumpInAir)
+    {
+      const bool isGroundJump = canJumpFromGround;
+      if (canJumpInAir)
+      {
+        player.setRemainingAirJumps(player.remainingAirJumps() - 1);
+        player.setDoubleJumpFxTicks(doubleJumpFxDurationTicks);
+      }
+      player.setVelocityY(isGroundJump ? groundJumpImpulse : airJumpImpulse);
+      player.setIsGrounded(false);
+      player.setJumpHoldTime(0.0f);
+    }
   }
   player.setJumpRequested(false);
+
+  const bool boostingGroundJump = player.remainingAirJumps() == maxAirJumps;
+  const float maxHoldTime = boostingGroundJump ? groundMaxHoldTime : airMaxHoldTime;
+  const float holdBoost = boostingGroundJump ? groundHoldBoost : airHoldBoost;
 
   if (
     !player.isGrounded() && 

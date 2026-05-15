@@ -103,6 +103,10 @@ public:
   {
     return player_.velocityY();
   }
+  int playerDoubleJumpFxTicks() const
+  {
+    return player_.doubleJumpFxTicks();
+  }
   bool willPlayerTouchGroundSoon(float lookAheadPx) const;
   void setSolidQuery(std::function<bool(int, int)> solidQuery)
   {

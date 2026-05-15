@@ -35,6 +35,11 @@ private:
       const AssetRepository& assets,
       int tileSizePx,
       int playerScale) const;
+  void drawDoubleJumpFx(
+      QPainter& painter,
+      const Engine& engine,
+      int tileSizePx,
+      int playerScale) const;
   void drawEnemies(QPainter& painter, const Engine& engine, const AssetRepository& assets, int tileSizePx) const;
   void drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const;
   void drawMenuOverlay(QPainter& painter, const QSize& targetSize, const MenuView& menuView) const;

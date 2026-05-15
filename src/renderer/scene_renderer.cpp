@@ -1,6 +1,7 @@
 #include "game/renderer/scene_renderer.h"
 #include <cmath>
 #include <QFont>
+#include <QColor>
 #include <QPainter>
 #include <QPen>
 #include <QTransform>
@@ -40,6 +41,7 @@ QPixmap SceneRenderer::renderFrame(
 
   tileMapper.render(painter, tileSizePx);
   drawPlayer(painter, engine, playerPresentation, assets, tileSizePx, playerScale);
+  drawDoubleJumpFx(painter, engine, tileSizePx, playerScale);
   drawEnemies(painter, engine, assets, tileSizePx);
   drawMenuOverlay(painter, targetSize, menuView);
 
@@ -137,6 +139,62 @@ void SceneRenderer::drawEnemies(
     painter.drawPixmap(enemyRect, assets.enemyTexture());
     drawLifeBarAboveEnemy(painter, *enemy, tileSizePx);
   }
+}
+
+void SceneRenderer::drawDoubleJumpFx(
+    QPainter& painter,
+    const Engine& engine,
+    int tileSizePx,
+    int playerScale) const
+{
+  constexpr int kFxDuration = 16;
+  const int ticksLeft = engine.playerDoubleJumpFxTicks();
+  if (ticksLeft <= 0)
+  {
+    return;
+  }
+
+  const double t = 1.0 - (static_cast<double>(ticksLeft) / static_cast<double>(kFxDuration));
+  const auto [topLeft, bottomRight] = EnemyPresentation::positionToRectPoints(engine.playerPosition(), tileSizePx);
+  const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
+  const QSize playerSize(cellSize.x() * playerScale, cellSize.y() * playerScale);
+
+  const int playerX = static_cast<int>(std::lround(engine.playerPixelX()));
+  const int playerY = static_cast<int>(std::lround(engine.playerPixelY()));
+  const int drawX = playerX - (playerSize.width() - cellSize.x()) / 2;
+  const int drawY = playerY + cellSize.y() - playerSize.height();
+  const int centerX = drawX + playerSize.width() / 2;
+  const int baseY = drawY + playerSize.height() - 6;
+
+  painter.save();
+  painter.setPen(Qt::NoPen);
+
+  const double spread = 10.0 + 30.0 * t;
+  const double lift = 2.0 + 16.0 * t;
+  const int alpha = static_cast<int>(180.0 * (1.0 - t));
+
+  const QColor glowColor(190, 235, 255, std::max(0, alpha));
+  const QColor coreColor(255, 255, 255, std::max(0, alpha + 20));
+
+  const QPointF offsets[] = {
+      QPointF(-1.0, 0.0), QPointF(-0.6, -0.35), QPointF(-0.2, -0.5), QPointF(0.2, -0.5),
+      QPointF(0.6, -0.35), QPointF(1.0, 0.0), QPointF(-0.35, 0.15), QPointF(0.35, 0.15)};
+
+  for (std::size_t i = 0; i < std::size(offsets); ++i)
+  {
+    const QPointF o = offsets[i];
+    const double px = centerX + o.x() * spread;
+    const double py = baseY - lift + o.y() * 10.0;
+    const double rOuter = 2.5 + 2.0 * (1.0 - t);
+    const double rInner = 1.4 + 1.2 * (1.0 - t);
+
+    painter.setBrush(glowColor);
+    painter.drawEllipse(QPointF(px, py), rOuter, rOuter);
+    painter.setBrush(coreColor);
+    painter.drawEllipse(QPointF(px, py), rInner, rInner);
+  }
+
+  painter.restore();
 }
 
 void SceneRenderer::drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const

@@ -14,6 +14,8 @@ private:
   bool jumpHeld_ = false;
   bool jumpRequested_ = false;
   float jumpHoldTime_ = 0.0f;
+  int remainingAirJumps_ = 1;
+  int doubleJumpFxTicks_ = 0;
   bool attackHeld_ = false;
   bool attackRequested_ = false;
   bool attackInProgress_ = false;
@@ -35,6 +37,10 @@ public:
   void setJumpRequested(bool v) { jumpRequested_ = v; }
   float jumpHoldTime() const { return jumpHoldTime_; }
   void setJumpHoldTime(float v) { jumpHoldTime_ = v; }
+  int remainingAirJumps() const { return remainingAirJumps_; }
+  void setRemainingAirJumps(int v) { remainingAirJumps_ = v; }
+  int doubleJumpFxTicks() const { return doubleJumpFxTicks_; }
+  void setDoubleJumpFxTicks(int v) { doubleJumpFxTicks_ = v; }
   bool attackHeld() const { return attackHeld_; }
   void setAttackHeld(bool v) { attackHeld_ = v; }
   bool attackRequested() const { return attackRequested_; }

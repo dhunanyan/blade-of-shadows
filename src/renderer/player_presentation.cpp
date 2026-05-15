@@ -273,6 +273,15 @@ void PlayerPresentation::updateAirPhase(const Engine& engine, int frameCount)
   const bool oneShotFinished =
       !activeLoop_ && frameCount > 0 && animationController_.isOneShotFinished(frameCount);
 
+  // If a mid-air jump happened while falling, velocity flips upward.
+  // Restart the jump sequence so double jump uses the same visual as initial jump.
+  if (!grounded && vy < -apexEpsilon &&
+      (airPhase_ == AirPhase::FallStart || airPhase_ == AirPhase::FallLoop || airPhase_ == AirPhase::FallEnd))
+  {
+    transitionToAirPhase(AirPhase::JumpStart);
+    return;
+  }
+
   if (grounded && !wasGrounded_ && airPhase_ != AirPhase::FallEnd)
   {
     transitionToAirPhase(AirPhase::FallEnd);
