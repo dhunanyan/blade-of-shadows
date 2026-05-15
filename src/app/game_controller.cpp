@@ -32,14 +32,15 @@ void GameController::onKeyEvent(int key, bool isPressed, bool isAutoRepeat)
       break;
     case Qt::Key_Escape:
     case Qt::Key_Backspace:
-      if (!menuSystem_.popMenu())
+      if (!menuSystem_.isRootMenuOpen())
       {
-        shouldQuit_ = true;
+        menuSystem_.popMenu();
       }
-      else if (!menuSystem_.isOpen())
+      else if (menuSystem_.currentMenuId() == "pause")
       {
-        shouldQuit_ = true;
+        resumeFromPause();
       }
+      // On the main menu root, Esc does nothing by design.
       break;
     default:
       break;
@@ -49,6 +50,7 @@ void GameController::onKeyEvent(int key, bool isPressed, bool isAutoRepeat)
 
   if (isPressed && !isAutoRepeat && key == Qt::Key_Escape)
   {
+    modeBeforePause_ = mode_;
     mode_ = GameMode::Menu;
     menuSystem_.openRoot("pause");
     input_.resetAll();
@@ -56,6 +58,24 @@ void GameController::onKeyEvent(int key, bool isPressed, bool isAutoRepeat)
   }
 
   InputMapper::applyQtKey(input_, key, isPressed, isAutoRepeat);
+}
+
+void GameController::onMenuHover(int hoveredIndex)
+{
+  if (mode_ != GameMode::Menu || hoveredIndex < 0)
+  {
+    return;
+  }
+  menuSystem_.setSelection(hoveredIndex);
+}
+
+void GameController::onMenuClick(int clickedIndex)
+{
+  if (mode_ != GameMode::Menu || clickedIndex < 0)
+  {
+    return;
+  }
+  menuSystem_.activateAt(clickedIndex);
 }
 
 void GameController::applyInput()
@@ -94,6 +114,7 @@ void GameController::buildMenus()
       "Main Menu",
       {
           MenuItem{"Start Game", [this]() { startGame(); }},
+          MenuItem{"Level Editor", [this]() { startLevelEditor(); }},
           MenuItem{"Options", [this]() { menuSystem_.pushMenu("options"); }},
           MenuItem{"Exit", [this]() { shouldQuit_ = true; }},
       }});
@@ -102,7 +123,7 @@ void GameController::buildMenus()
       "pause",
       "Paused",
       {
-          MenuItem{"Resume", [this]() { startGame(); }},
+          MenuItem{"Resume", [this]() { resumeFromPause(); }},
           MenuItem{"Options", [this]() { menuSystem_.pushMenu("options"); }},
           MenuItem{"Main Menu", [this]() { mode_ = GameMode::Menu; menuSystem_.openRoot("main"); input_.resetAll(); }},
           MenuItem{"Exit", [this]() { shouldQuit_ = true; }},
@@ -121,6 +142,20 @@ void GameController::buildMenus()
 void GameController::startGame()
 {
   mode_ = GameMode::Playing;
+  menuSystem_.popMenu();
+  input_.resetAll();
+}
+
+void GameController::startLevelEditor()
+{
+  mode_ = GameMode::LevelEditor;
+  menuSystem_.popMenu();
+  input_.resetAll();
+}
+
+void GameController::resumeFromPause()
+{
+  mode_ = modeBeforePause_;
   menuSystem_.popMenu();
   input_.resetAll();
 }

@@ -36,7 +36,9 @@ public:
   bool popMenu();
 
   void moveSelection(int delta);
+  void setSelection(int index);
   bool activateSelected();
+  bool activateAt(int index);
 
   bool isOpen() const
   {

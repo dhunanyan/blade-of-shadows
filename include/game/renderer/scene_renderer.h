@@ -2,6 +2,7 @@
 #define GAME_RENDERER_SCENE_RENDERER_H
 
 #include <QPixmap>
+#include <QPoint>
 #include <QSize>
 
 class QPainter;
@@ -23,6 +24,7 @@ public:
       const MenuView& menuView,
       int tileSizePx,
       int playerScale) const;
+  int menuItemAtPoint(const MenuView& menuView, const QSize& targetSize, const QPoint& point) const;
 
 private:
   void drawBackgroundLayers(QPainter& painter, const AssetRepository& assets, const QSize& targetSize) const;

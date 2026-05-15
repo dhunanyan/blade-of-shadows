@@ -6,9 +6,12 @@ doxygen/
 temp/
 .venv/
 
-### IDEE
+### IDEE ###
 .vscode/
 *.aseprite
 
 ### Runtime-fetched test deps ###
 tests/lib/
+
+### local machine ###
+.DS_STORE

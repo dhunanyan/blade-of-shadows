@@ -64,6 +64,17 @@ void MenuSystem::moveSelection(int delta)
   selectedIndexForCurrentMenu() = next;
 }
 
+void MenuSystem::setSelection(int index)
+{
+  const MenuDefinition* menu = currentMenu();
+  if (menu == nullptr || menu->items.empty())
+  {
+    return;
+  }
+  const int clampedIndex = std::clamp(index, 0, static_cast<int>(menu->items.size()) - 1);
+  selectedIndexForCurrentMenu() = clampedIndex;
+}
+
 bool MenuSystem::activateSelected()
 {
   const MenuDefinition* menu = currentMenu();
@@ -80,6 +91,12 @@ bool MenuSystem::activateSelected()
     return true;
   }
   return false;
+}
+
+bool MenuSystem::activateAt(int index)
+{
+  setSelection(index);
+  return activateSelected();
 }
 
 const std::string& MenuSystem::currentMenuId() const

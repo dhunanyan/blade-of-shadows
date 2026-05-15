@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QMediaPlayer>
+#include <QRect>
 #include <QTimer>
 #include "game/app/game_controller.h"
 #include "game/app/qt/tilemapper.h"
@@ -23,11 +24,17 @@ public:
     ~MainWindow();
 
     void redrawView();
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 public slots:
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
     void update();
+
+private:
+    void handleMenuPointer(const QPoint& localPoint, bool activate);
 
 private:
     Ui::MainWindow *ui_;
@@ -38,6 +45,8 @@ private:
     PlayerPresentation playerPresentation_;
     QTimer timer_;
     QMediaPlayer player_;
+    QRect displayedFrameRect_;
+    QSize sourceFrameSize_;
 
     static constexpr int tileSizePx_ = 24;
     static constexpr int playerScale_ = 3;

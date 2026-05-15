@@ -46,6 +46,32 @@ QPixmap SceneRenderer::renderFrame(
   return composed;
 }
 
+int SceneRenderer::menuItemAtPoint(const MenuView& menuView, const QSize& targetSize, const QPoint& point) const
+{
+  if (!menuView.visible)
+  {
+    return -1;
+  }
+
+  const int panelWidth = targetSize.width() * 2 / 5;
+  const int panelHeight = targetSize.height() * 3 / 5;
+  const int panelX = (targetSize.width() - panelWidth) / 2;
+  const int panelY = (targetSize.height() - panelHeight) / 2;
+
+  const int itemStartY = panelY + 80;
+  const int itemStep = 40;
+  for (int index = 0; index < static_cast<int>(menuView.items.size()); ++index)
+  {
+    const QRect itemRect(panelX + 24, itemStartY + index * itemStep, panelWidth - 48, 30);
+    if (itemRect.adjusted(-8, -2, 8, 2).contains(point))
+    {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
 void SceneRenderer::drawBackgroundLayers(QPainter& painter, const AssetRepository& assets, const QSize& targetSize) const
 {
   const QPixmap layer2 = assets.backgroundLayer2().scaled(

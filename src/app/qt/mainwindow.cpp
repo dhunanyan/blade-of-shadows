@@ -1,8 +1,11 @@
 #include <QAudioOutput>
 #include <QApplication>
 #include <QDebug>
+#include <QEvent>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QMediaPlayer>
+#include <QPainter>
 #include "game/app/qt/mainwindow.h"
 #include "./ui_mainwindow.h"
 
@@ -13,6 +16,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui_->setupUi(this);
     ui_->background->setScaledContents(false);
+    setMouseTracking(true);
+    ui_->background->setMouseTracking(true);
+    ui_->background->installEventFilter(this);
 
     tileMapper_.loadFromJsonResource(QString::fromUtf8(":/levels/sample_level.json"));
     gameController_.engine().setSolidQuery([this](int x, int y) {
@@ -48,7 +54,47 @@ void MainWindow::redrawView()
         gameController_.menuView(),
         tileSizePx_,
         playerScale_);
-    ui_->background->setPixmap(frame);
+    sourceFrameSize_ = frame.size();
+
+    const QSize viewportSize = ui_->background->size();
+    const QPixmap scaledFrame = frame.scaled(
+        viewportSize,
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation);
+
+    QPixmap canvas(viewportSize);
+    canvas.fill(Qt::black);
+
+    const int offsetX = (viewportSize.width() - scaledFrame.width()) / 2;
+    const int offsetY = (viewportSize.height() - scaledFrame.height()) / 2;
+    displayedFrameRect_ = QRect(offsetX, offsetY, scaledFrame.width(), scaledFrame.height());
+
+    {
+        QPainter painter(&canvas);
+        painter.drawPixmap(displayedFrameRect_.topLeft(), scaledFrame);
+    }
+    ui_->background->setPixmap(canvas);
+}
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == ui_->background)
+    {
+        if (event->type() == QEvent::MouseMove)
+        {
+            auto* mouseEvent = static_cast<QMouseEvent*>(event);
+            handleMenuPointer(mouseEvent->position().toPoint(), false);
+        }
+        else if (event->type() == QEvent::MouseButtonPress)
+        {
+            auto* mouseEvent = static_cast<QMouseEvent*>(event);
+            if (mouseEvent->button() == Qt::LeftButton)
+            {
+                handleMenuPointer(mouseEvent->position().toPoint(), true);
+            }
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event)
@@ -61,6 +107,55 @@ void MainWindow::keyReleaseEvent(QKeyEvent* event)
 {
     gameController_.onKeyEvent(event->key(), false, event->isAutoRepeat());
     QMainWindow::keyReleaseEvent(event);
+}
+
+void MainWindow::mouseMoveEvent(QMouseEvent* event)
+{
+    QMainWindow::mouseMoveEvent(event);
+}
+
+void MainWindow::mousePressEvent(QMouseEvent* event)
+{
+    QMainWindow::mousePressEvent(event);
+}
+
+void MainWindow::handleMenuPointer(const QPoint& localPoint, bool activate)
+{
+    const MenuView menuView = gameController_.menuView();
+    if (!menuView.visible)
+    {
+        return;
+    }
+
+    if (!displayedFrameRect_.isValid() || sourceFrameSize_.isEmpty())
+    {
+        return;
+    }
+
+    if (!displayedFrameRect_.contains(localPoint))
+    {
+        if (!activate)
+        {
+            gameController_.onMenuHover(-1);
+        }
+        return;
+    }
+
+    const int relativeX = localPoint.x() - displayedFrameRect_.x();
+    const int relativeY = localPoint.y() - displayedFrameRect_.y();
+    const int mappedX = static_cast<int>(relativeX * (static_cast<double>(sourceFrameSize_.width()) / displayedFrameRect_.width()));
+    const int mappedY = static_cast<int>(relativeY * (static_cast<double>(sourceFrameSize_.height()) / displayedFrameRect_.height()));
+    const QPoint mappedPoint(mappedX, mappedY);
+
+    const int menuIndex = sceneRenderer_.menuItemAtPoint(menuView, sourceFrameSize_, mappedPoint);
+    if (activate)
+    {
+        gameController_.onMenuClick(menuIndex);
+    }
+    else
+    {
+        gameController_.onMenuHover(menuIndex);
+    }
 }
 
 void MainWindow::update()

@@ -9,7 +9,8 @@
 enum class GameMode
 {
   Menu,
-  Playing
+  Playing,
+  LevelEditor
 };
 
 class GameController
@@ -50,18 +51,23 @@ public:
   }
 
   void onKeyEvent(int key, bool isPressed, bool isAutoRepeat);
+  void onMenuHover(int hoveredIndex);
+  void onMenuClick(int clickedIndex);
   void applyInput();
   void tick();
 
 private:
   void buildMenus();
   void startGame();
+  void startLevelEditor();
+  void resumeFromPause();
 
 private:
   Engine engine_;
   InputState input_;
   MenuSystem menuSystem_;
   GameMode mode_ = GameMode::Menu;
+  GameMode modeBeforePause_ = GameMode::Playing;
   bool shouldQuit_ = false;
 };
 
