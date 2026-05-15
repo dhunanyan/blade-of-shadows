@@ -94,11 +94,11 @@ void Engine::updatePlayerAttackState(Player& player)
 
 void Engine::handlePlayerJump(Player& player)
 {
-  constexpr float groundJumpImpulse = -3.8f;
-  constexpr float airJumpImpulse = -3.2f;
-  constexpr float groundMaxHoldTime = 0.15f;
+  constexpr float groundJumpImpulse = -4.1f;
+  constexpr float airJumpImpulse = -3.35f;
+  constexpr float groundMaxHoldTime = 0.13f;
   constexpr float airMaxHoldTime = 0.10f;
-  constexpr float groundHoldBoost = -0.08f;
+  constexpr float groundHoldBoost = -0.075f;
   constexpr float airHoldBoost = -0.06f;
   constexpr int maxAirJumps = 1;
   constexpr int doubleJumpFxDurationTicks = 16;
@@ -151,9 +151,9 @@ void Engine::handlePlayerJump(Player& player)
 void Engine::applyGravity(Player& player)
 {
   constexpr float tileSizePx = 24.0f;
-  constexpr float gravityUp = 0.144f;
-  constexpr float gravityDown = 0.320f;
-  constexpr float maxFallSpeed = 2.40f;
+  constexpr float gravityUp = 0.19f;
+  constexpr float gravityDown = 0.42f;
+  constexpr float maxFallSpeed = 3.10f;
 
   auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
   {
