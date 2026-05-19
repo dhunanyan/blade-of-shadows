@@ -16,6 +16,7 @@ private:
   float jumpHoldTime_ = 0.0f;
   int remainingAirJumps_ = 1;
   int doubleJumpFxTicks_ = 0;
+  int jumpApexHangTicks_ = 0;
   bool attackHeld_ = false;
   bool attackRequested_ = false;
   bool attackInProgress_ = false;
@@ -41,6 +42,8 @@ public:
   void setRemainingAirJumps(int v) { remainingAirJumps_ = v; }
   int doubleJumpFxTicks() const { return doubleJumpFxTicks_; }
   void setDoubleJumpFxTicks(int v) { doubleJumpFxTicks_ = v; }
+  int jumpApexHangTicks() const { return jumpApexHangTicks_; }
+  void setJumpApexHangTicks(int v) { jumpApexHangTicks_ = v; }
   bool attackHeld() const { return attackHeld_; }
   void setAttackHeld(bool v) { attackHeld_ = v; }
   bool attackRequested() const { return attackRequested_; }

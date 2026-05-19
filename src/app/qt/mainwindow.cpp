@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QMediaPlayer>
 #include <QPainter>
+#include "game/core/position.h"
 #include "game/app/qt/mainwindow.h"
 #include "./ui_mainwindow.h"
 
@@ -24,6 +25,38 @@ MainWindow::MainWindow(QWidget *parent)
     gameController_.engine().setSolidQuery([this](int x, int y) {
         return tileMapper_.isSolidAt(x, y);
     });
+    if (tileMapper_.hasPlayerStart())
+    {
+        const int startX = tileMapper_.playerStartX();
+        int startY = tileMapper_.playerStartY();
+
+        // Resolve spawn to a valid standing cell:
+        // 1) move up if configured cell is solid,
+        // 2) then drop down until standing on top of solid ground.
+        while (startY > 0 && tileMapper_.isSolidAt(startX, startY))
+        {
+            --startY;
+        }
+        while (startY + 1 < tileMapper_.levelHeight() && !tileMapper_.isSolidAt(startX, startY + 1))
+        {
+            ++startY;
+        }
+        if (tileMapper_.isSolidAt(startX, startY))
+        {
+            --startY;
+        }
+        if (startY < 0)
+        {
+            startY = 0;
+        }
+
+        const Position startPosition(
+            static_cast<std::size_t>(startX),
+            static_cast<std::size_t>(startY));
+        gameController_.engine().setPlayerPosition(startPosition);
+        gameController_.engine().setPlayerPixelX(static_cast<float>(startX * tileSizePx_));
+        gameController_.engine().setPlayerPixelY(static_cast<float>(startY * tileSizePx_));
+    }
 
     if (!assets_.loadAll())
     {

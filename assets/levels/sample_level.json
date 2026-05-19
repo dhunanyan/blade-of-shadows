@@ -4,6 +4,7 @@
   "height": 25,
   "tileSize": 24,
   "tileset": ":/tiles/tileset.png",
+  "playerStart": { "x": 3, "y": 19 },
   "tiles": [
     {
       "x": 0,

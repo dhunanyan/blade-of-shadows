@@ -47,7 +47,7 @@ void PlayerPresentation::update(const InputState& input, const Engine& engine, c
       setVisualWindow(ClipWindow{PlayerAnimationState::Dodge, 1, 3, 0.20, true});
       break;
     case PlayerAnimationState::Run:
-      setVisualWindow(ClipWindow{PlayerAnimationState::Run, 1, 8, 0.15, true});
+      setVisualWindow(ClipWindow{PlayerAnimationState::Run, 1, 8, 0.22, true});
       break;
     case PlayerAnimationState::Idle:
     default:

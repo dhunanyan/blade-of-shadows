@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19)
-project(pp2_game LANGUAGES CXX)
+project(blade_of_shadows LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

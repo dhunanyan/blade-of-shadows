@@ -63,9 +63,18 @@ public:
     playerPixelX_ = pixelX;
     syncPlayerGridPosition();
   }
+  void setPlayerPixelY(float pixelY)
+  {
+    playerPixelY_ = pixelY;
+    syncPlayerGridPosition();
+  }
   void setPlayerMoveIntentX(int intentX)
   {
     playerMoveIntentX_ = std::clamp(intentX, -1, 1);
+  }
+  int playerMoveIntentX() const
+  {
+    return playerMoveIntentX_;
   }
   void setPlayerDirection(Direction direction)
   {

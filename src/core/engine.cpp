@@ -94,14 +94,37 @@ void Engine::updatePlayerAttackState(Player& player)
 
 void Engine::handlePlayerJump(Player& player)
 {
-  constexpr float groundJumpImpulse = -4.1f;
-  constexpr float airJumpImpulse = -3.35f;
-  constexpr float groundMaxHoldTime = 0.13f;
+  constexpr float groundJumpImpulse = -4.6f;
+  constexpr float airJumpImpulse = -3.75f;
+  constexpr float groundMaxHoldTime = 0.14f;
   constexpr float airMaxHoldTime = 0.10f;
   constexpr float groundHoldBoost = -0.075f;
   constexpr float airHoldBoost = -0.06f;
   constexpr int maxAirJumps = 1;
   constexpr int doubleJumpFxDurationTicks = 16;
+  constexpr int jumpApexHangDurationTicks = 8; // brief apex hang
+  constexpr float tileSizePx = 24.0f;
+
+  auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
+  {
+    if (pixelY < 0.0f)
+    {
+      return false;
+    }
+    const int topCell = static_cast<int>(std::floor(pixelY / tileSizePx));
+    const int belowCellY = topCell + 1;
+    if (belowCellY >= static_cast<int>(stage_.height()))
+    {
+      return true;
+    }
+
+    const int leftCellX = static_cast<int>(std::floor(playerPixelX_ / tileSizePx));
+    const int rightCellX = static_cast<int>(std::floor((playerPixelX_ + tileSizePx - 1.0f) / tileSizePx));
+    return isSolidAt(leftCellX, belowCellY) || isSolidAt(rightCellX, belowCellY);
+  };
+
+  // Keep grounded state synchronized at jump decision time
+  player.setIsGrounded(isSolidBelowAtPixelY(playerPixelY_));
 
   if (player.isGrounded())
   {
@@ -124,6 +147,7 @@ void Engine::handlePlayerJump(Player& player)
       player.setVelocityY(isGroundJump ? groundJumpImpulse : airJumpImpulse);
       player.setIsGrounded(false);
       player.setJumpHoldTime(0.0f);
+      player.setJumpApexHangTicks(jumpApexHangDurationTicks);
     }
   }
   player.setJumpRequested(false);
@@ -154,6 +178,7 @@ void Engine::applyGravity(Player& player)
   constexpr float gravityUp = 0.19f;
   constexpr float gravityDown = 0.42f;
   constexpr float maxFallSpeed = 3.10f;
+  constexpr float apexVelocityThreshold = 0.22f;
 
   auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
   {
@@ -179,10 +204,19 @@ void Engine::applyGravity(Player& player)
   {
     player.setVelocityY(0.0f);
     player.setJumpHoldTime(0.0f);
+    player.setJumpApexHangTicks(0);
     playerPixelY_ = std::floor(playerPixelY_ / tileSizePx) * tileSizePx;
   }
   else
   {
+    if (std::abs(player.velocityY()) <= apexVelocityThreshold && player.jumpApexHangTicks() > 0)
+    {
+      player.setVelocityY(0.0f);
+      player.setJumpApexHangTicks(player.jumpApexHangTicks() - 1);
+      syncPlayerGridPosition();
+      return;
+    }
+
     const float gravity = (player.velocityY() < 0.0f) ? gravityUp : gravityDown;
     float vy = player.velocityY() + gravity;
     if (vy > maxFallSpeed)
@@ -315,7 +349,7 @@ bool Engine::willPlayerTouchGroundSoon(float lookAheadPx) const
 void Engine::applyHorizontalMovement(Player& player)
 {
   constexpr float tileSizePx = 24.0f;
-  constexpr float playerMoveStepPx = 2.0f;
+  constexpr float playerMoveStepPx = 2.35f;
 
   if (playerMoveIntentX_ == 0)
   {

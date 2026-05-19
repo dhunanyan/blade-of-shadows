@@ -12,6 +12,10 @@ bool TileMapper::loadFromJsonResource(const QString& levelResourcePath)
   tiles_.clear();
   solidGrid_.clear();
   loaded_ = false;
+  maxOccupiedColumn_ = 0;
+  hasPlayerStart_ = false;
+  playerStartX_ = 0;
+  playerStartY_ = 0;
 
   QFile file(levelResourcePath);
   if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
@@ -25,8 +29,21 @@ bool TileMapper::loadFromJsonResource(const QString& levelResourcePath)
   levelHeight_ = root.value("height").toInt();
   tileSizePx_ = root.value("tileSize").toInt(24);
   const QString tilesetPath = root.value("tileset").toString();
+  const QJsonObject playerStartObj = root.value("playerStart").toObject();
 
   if (levelWidth_ <= 0 || levelHeight_ <= 0 || tileSizePx_ <= 0 || tilesetPath.isEmpty()) return false;
+
+  if (!playerStartObj.isEmpty())
+  {
+    const int startX = playerStartObj.value("x").toInt(-1);
+    const int startY = playerStartObj.value("y").toInt(-1);
+    if (startX >= 0 && startY >= 0 && startX < levelWidth_ && startY < levelHeight_)
+    {
+      hasPlayerStart_ = true;
+      playerStartX_ = startX;
+      playerStartY_ = startY;
+    }
+  }
   solidGrid_.assign(static_cast<std::size_t>(levelHeight_),
                     std::vector<bool>(static_cast<std::size_t>(levelWidth_), false));
 
@@ -66,6 +83,10 @@ bool TileMapper::loadFromJsonResource(const QString& levelResourcePath)
     solidGrid_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = solid;
     tile.pixmap = tilePixmap;
     tiles_.push_back(tile);
+    if (x > maxOccupiedColumn_)
+    {
+      maxOccupiedColumn_ = x;
+    }
   }
 
   loaded_ = true;
@@ -80,13 +101,17 @@ bool TileMapper::isSolidAt(int gridX, int gridY) const
   return solidGrid_[static_cast<std::size_t>(gridY)][static_cast<std::size_t>(gridX)];
 }
 
-void TileMapper::render(QPainter& painter, int tileSizePx) const
+void TileMapper::render(QPainter& painter, int tileSizePx, int cameraOffsetXPx) const
 {
   if (!loaded_ || tileSizePx <= 0) return;
 
   for (const Tile& tile : tiles_)
   {
-    const QRect targetRect(tile.x * tileSizePx, tile.y * tileSizePx, tileSizePx, tileSizePx);
+    const QRect targetRect(
+        tile.x * tileSizePx - cameraOffsetXPx,
+        tile.y * tileSizePx,
+        tileSizePx,
+        tileSizePx);
     painter.drawPixmap(targetRect, tile.pixmap);
   }
 }

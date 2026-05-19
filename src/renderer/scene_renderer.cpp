@@ -22,9 +22,12 @@ QPixmap SceneRenderer::renderFrame(
     int tileSizePx,
     int playerScale) const
 {
-  const QSize targetSize(
-      static_cast<int>(engine.stageWidthCells()) * tileSizePx,
-      static_cast<int>(engine.stageHeightCells()) * tileSizePx);
+  const int stageWidthPx = static_cast<int>(engine.stageWidthCells()) * tileSizePx;
+  const int stageHeightPx = static_cast<int>(engine.stageHeightCells()) * tileSizePx;
+  const int viewportWidthPx = std::min(stageWidthPx, viewportWidthCells_ * tileSizePx);
+  const int contentWidthPx = std::max(viewportWidthPx, (tileMapper.maxOccupiedColumn() + 1) * tileSizePx);
+  const float maxCameraX = std::max(0.0f, static_cast<float>(contentWidthPx - viewportWidthPx));
+  const QSize targetSize(viewportWidthPx, stageHeightPx);
 
   QPixmap composed = assets.backgroundLayer1().scaled(
       targetSize,
@@ -39,13 +42,52 @@ QPixmap SceneRenderer::renderFrame(
     painter.drawRect(composed.rect());
   }
 
-  tileMapper.render(painter, tileSizePx);
-  drawPlayer(painter, engine, playerPresentation, assets, tileSizePx, playerScale);
-  drawDoubleJumpFx(painter, engine, tileSizePx, playerScale);
-  drawEnemies(painter, engine, assets, tileSizePx);
+  const float cameraX = updateCameraX(engine, targetSize, maxCameraX);
+  const int cameraOffsetXPx = static_cast<int>(std::lround(cameraX));
+
+  tileMapper.render(painter, tileSizePx, cameraOffsetXPx);
+  drawPlayer(painter, engine, playerPresentation, assets, cameraOffsetXPx, tileSizePx, playerScale);
+  drawDoubleJumpFx(painter, engine, cameraOffsetXPx, tileSizePx, playerScale);
+  drawEnemies(painter, engine, assets, cameraOffsetXPx, tileSizePx);
   drawMenuOverlay(painter, targetSize, menuView);
 
   return composed;
+}
+
+float SceneRenderer::updateCameraX(const Engine& engine, const QSize& viewportSize, float maxCameraX) const
+{
+  const float viewportWidthPx = static_cast<float>(viewportSize.width());
+
+  if (maxCameraX <= 0.0f)
+  {
+    cameraX_ = 0.0f;
+    cameraInitialized_ = true;
+    return cameraX_;
+  }
+
+  const float leftTrigger = viewportWidthPx * 0.25f;
+
+  if (!cameraInitialized_)
+  {
+    // Start with player in the left part of the screen (around chunk1/chunk2 split).
+    cameraX_ = std::clamp(engine.playerPixelX() - leftTrigger, 0.0f, maxCameraX);
+    cameraInitialized_ = true;
+  }
+
+  const float playerScreenX = engine.playerPixelX() - cameraX_;
+  const int moveIntentX = engine.playerMoveIntentX();
+
+  if (moveIntentX < 0 && playerScreenX < leftTrigger)
+  {
+    cameraX_ -= (leftTrigger - playerScreenX);
+  }
+  else if (moveIntentX > 0 && playerScreenX > leftTrigger)
+  {
+    cameraX_ += (playerScreenX - leftTrigger);
+  }
+
+  cameraX_ = std::clamp(cameraX_, 0.0f, maxCameraX);
+  return cameraX_;
 }
 
 int SceneRenderer::menuItemAtPoint(const MenuView& menuView, const QSize& targetSize, const QPoint& point) const
@@ -94,6 +136,7 @@ void SceneRenderer::drawPlayer(
     const Engine& engine,
     const PlayerPresentation& playerPresentation,
     const AssetRepository& assets,
+    int cameraOffsetXPx,
     int tileSizePx,
     int playerScale) const
 {
@@ -118,7 +161,7 @@ void SceneRenderer::drawPlayer(
   const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
   const QSize targetSize(cellSize.x() * playerScale, cellSize.y() * playerScale);
 
-  const int playerX = static_cast<int>(std::lround(engine.playerPixelX()));
+  const int playerX = static_cast<int>(std::lround(engine.playerPixelX())) - cameraOffsetXPx;
   const int playerY = static_cast<int>(std::lround(engine.playerPixelY()));
   const int drawX = playerX - (targetSize.width() - cellSize.x()) / 2;
   const int drawY = playerY + cellSize.y() - targetSize.height();
@@ -130,20 +173,29 @@ void SceneRenderer::drawEnemies(
     QPainter& painter,
     const Engine& engine,
     const AssetRepository& assets,
+    int cameraOffsetXPx,
     int tileSizePx) const
 {
   for (const auto& enemy : engine.enemies())
   {
     const auto [topLeft, bottomRight] = EnemyPresentation::positionToRectPoints(enemy->position(), tileSizePx);
-    const QRect enemyRect(topLeft, bottomRight);
+    const QRect enemyRect(
+        topLeft.x() - cameraOffsetXPx,
+        topLeft.y(),
+        bottomRight.x() - topLeft.x() + 1,
+        bottomRight.y() - topLeft.y() + 1);
     painter.drawPixmap(enemyRect, assets.enemyTexture());
+    painter.save();
+    painter.translate(-cameraOffsetXPx, 0);
     drawLifeBarAboveEnemy(painter, *enemy, tileSizePx);
+    painter.restore();
   }
 }
 
 void SceneRenderer::drawDoubleJumpFx(
     QPainter& painter,
     const Engine& engine,
+    int cameraOffsetXPx,
     int tileSizePx,
     int playerScale) const
 {
@@ -159,7 +211,7 @@ void SceneRenderer::drawDoubleJumpFx(
   const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
   const QSize playerSize(cellSize.x() * playerScale, cellSize.y() * playerScale);
 
-  const int playerX = static_cast<int>(std::lround(engine.playerPixelX()));
+  const int playerX = static_cast<int>(std::lround(engine.playerPixelX())) - cameraOffsetXPx;
   const int playerY = static_cast<int>(std::lround(engine.playerPixelY()));
   const int drawX = playerX - (playerSize.width() - cellSize.x()) / 2;
   const int drawY = playerY + cellSize.y() - playerSize.height();
@@ -170,7 +222,7 @@ void SceneRenderer::drawDoubleJumpFx(
   painter.setPen(Qt::NoPen);
 
   const double spread = 10.0 + 30.0 * t;
-  const double lift = 2.0 + 16.0 * t;
+  const double drop = 2.0 + 16.0 * t;
   const int alpha = static_cast<int>(180.0 * (1.0 - t));
 
   const QColor glowColor(190, 235, 255, std::max(0, alpha));
@@ -184,7 +236,7 @@ void SceneRenderer::drawDoubleJumpFx(
   {
     const QPointF o = offsets[i];
     const double px = centerX + o.x() * spread;
-    const double py = baseY - lift + o.y() * 10.0;
+    const double py = baseY + drop + o.y() * 10.0;
     const double rOuter = 2.5 + 2.0 * (1.0 - t);
     const double rInner = 1.4 + 1.2 * (1.0 - t);
 

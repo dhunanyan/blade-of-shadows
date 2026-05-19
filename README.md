@@ -1,6 +1,7 @@
-# pp2-lab14-game
+# Blade of Shadows
 
 Compact 2D shooter project in C++ with:
+
 - core gameplay logic (`game_core` library),
 - Qt GUI app (`game` target),
 - unit tests (`tests` target with GoogleTest).
@@ -8,6 +9,7 @@ Compact 2D shooter project in C++ with:
 ## Quick Start
 
 Requirements:
+
 - CMake >= 3.19
 - C++ compiler with C++23 support
 - Qt5/Qt6 (Widgets + Multimedia)
@@ -62,6 +64,7 @@ Use custom build directory (optional):
 ## CLI Runner
 
 The CLI target (`game_cli`) is a lightweight headless simulation runner useful for:
+
 - quick gameplay smoke checks without GUI,
 - debugging movement/spawn behavior in CI/terminal,
 - future balancing experiments (difficulty, enemy count, bullet tuning).
