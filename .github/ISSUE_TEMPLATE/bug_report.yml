@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a gameplay, rendering, input, audio, or build problem
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Clear reproduction steps make fixes much faster.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+      placeholder: The player gets stuck inside the ground after loading a level.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps to reproduce the problem.
+      placeholder: |
+        1. Launch the game
+        2. Start a new run
+        3. Jump near the first platform
+        4. Observe the issue
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The player should land on top of the tile and still be able to jump.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: The player appears inside the tile and jump input does nothing.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Gameplay
+        - Movement / Physics
+        - Animation / Rendering
+        - UI / Menu
+        - Audio
+        - Build / CI
+        - Tests
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: OS, compiler, and Qt version if known
+      placeholder: macOS 15, AppleClang 17, Qt 6
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots, or recordings
+      description: Paste any useful logs or attach visual evidence.

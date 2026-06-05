@@ -1,36 +1,23 @@
-image: ubuntu:24.04
 stages:
-  - build
   - test
+  - build
 
-cache:
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - build/
+default:
+  image: ubuntu:24.04
+  before_script:
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake ninja-build git
 
-before_script:
-  - export DEBIAN_FRONTEND=noninteractive
-  - apt-get update -qq
-  - apt-get install -y -qq cmake g++ make valgrind libgtest-dev python3
-
-build:
-  stage: build
-  script:
-    - bash ./scripts/ensure_test_lib.sh
-    - cmake -S . -B build
-    - cmake --build build --target tests
-  artifacts:
-    paths:
-      - build/
-    expire_in: 1 hour
-  allow_failure: false
-
-test:
+unit_tests:
   stage: test
-  needs:
-    - job: build
-      artifacts: true
   script:
-    - ls -lah build/bin
-    - ./build/bin/tests
-  allow_failure: false
+    - ./scripts/test.sh build-gitlab-tests
+
+gui_build:
+  stage: build
+  before_script:
+    - apt-get update
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev
+  script:
+    - ./scripts/build.sh build-gitlab-gui
+

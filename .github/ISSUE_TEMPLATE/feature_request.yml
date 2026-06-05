@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest a gameplay, UI, technical, or content improvement
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea. Try to describe the player value and the intended behavior.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What is missing or what could be better?
+      placeholder: Combat feels limited because attacks cannot chain into combos.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe how you imagine it should work.
+      placeholder: Add a lightweight combo system with separate air and ground attacks.
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Request type
+      options:
+        - Gameplay
+        - Combat
+        - Movement
+        - Animation / VFX
+        - UI / UX
+        - Audio
+        - Level design
+        - Developer experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional, but helpful if you compared multiple approaches.
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Optional links, mockups, games, or screenshots that illustrate the idea.
