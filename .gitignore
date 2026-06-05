@@ -1,6 +1,8 @@
 ### CMake ###
 build/
 doxygen/
+build-ci-gui/
+build-ci-tests/
 
 ### Temporary playgrounds ###
 temp/
