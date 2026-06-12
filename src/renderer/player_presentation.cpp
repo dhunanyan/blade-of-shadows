@@ -37,7 +37,7 @@ void PlayerPresentation::update(const InputState& input, const Engine& engine, c
   }
   else
   {
-    const PlayerAnimationState groundedState = resolveGroundedState(input);
+    const PlayerAnimationState groundedState = resolveGroundedState(input, engine);
     switch (groundedState)
     {
     case PlayerAnimationState::DodgeMove:
@@ -123,14 +123,14 @@ bool PlayerPresentation::isFacingLeft(Direction direction) const
          direction == Direction::DOWNER_LEFT;
 }
 
-PlayerAnimationState PlayerPresentation::resolveGroundedState(const InputState& input) const
+PlayerAnimationState PlayerPresentation::resolveGroundedState(const InputState& input, const Engine& engine) const
 {
-  if ((input.leftPressed || input.rightPressed) && input.downPressed)
+  if (engine.isPlayerDodging() && (input.leftPressed || input.rightPressed))
   {
     return PlayerAnimationState::DodgeMove;
   }
 
-  if (input.downPressed)
+  if (engine.isPlayerDodging())
   {
     return PlayerAnimationState::Dodge;
   }

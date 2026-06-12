@@ -1,33 +1,29 @@
 #ifndef GAME_CORE_POSITION_H
 #define GAME_CORE_POSITION_H
 
-#include <cstddef>  // std::size_t
-
 struct Position
 {
-  std::size_t x_=0, y_=0;
-  Position(std::size_t x={}, std::size_t y={}): x_(x), y_(y) {}
-  auto x() const
-  {
-    return x_;
-  }
-  auto y() const
-  {
-    return y_;
-  }
+  int x_ = 0;
+  int y_ = 0;
+
+  Position(int x = 0, int y = 0) : x_(x), y_(y) {}
+
+  int x() const { return x_; }
+  int y() const { return y_; }
+
   Position& moveUp()
   {
-    y_++;
+    --y_;
     return *this;
   }
   Position& moveDown()
   {
-    y_--;
+    ++y_;
     return *this;
   }
   Position& moveLeft()
   {
-    x_--;
+    --x_;
     return *this;
   }
   Position& moveRight()
@@ -51,6 +47,8 @@ struct Position
   {
     return moveDown().moveLeft();
   }
+
+  bool operator==(const Position&) const = default;
 };
 
 #endif // GAME_CORE_POSITION_H

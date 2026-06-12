@@ -1,30 +1,54 @@
 #include "game/app/qt/tilemapper.h"
 
+#include <algorithm>
+#include <utility>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QIODevice>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPainter>
 #include <QRect>
+#include <QSaveFile>
 
 bool TileMapper::loadFromJsonResource(const QString& levelResourcePath)
 {
+  QFile file(levelResourcePath);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
+  return loadFromDevice(file);
+}
+
+bool TileMapper::loadFromJsonFile(const QString& levelFilePath)
+{
+  QFile file(levelFilePath);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
+  return loadFromDevice(file);
+}
+
+bool TileMapper::loadFromDevice(QIODevice& device)
+{
   tiles_.clear();
   solidGrid_.clear();
+  enemySpawns_.clear();
+  coinSpawns_.clear();
+  levelExit_.reset();
   loaded_ = false;
   maxOccupiedColumn_ = 0;
   hasPlayerStart_ = false;
   playerStartX_ = 0;
   playerStartY_ = 0;
+  levelId_.clear();
+  levelName_.clear();
 
-  QFile file(levelResourcePath);
-  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
-
-  const QByteArray data = file.readAll();
+  const QByteArray data = device.readAll();
   const QJsonDocument doc = QJsonDocument::fromJson(data);
   if (!doc.isObject()) return false;
 
   const QJsonObject root = doc.object();
+  levelId_ = root.value("id").toString(root.value("name").toString(QString::fromUtf8("level")));
+  levelName_ = root.value("displayName").toString(root.value("name").toString(levelId_));
   levelWidth_ = root.value("width").toInt();
   levelHeight_ = root.value("height").toInt();
   tileSizePx_ = root.value("tileSize").toInt(24);
@@ -47,16 +71,45 @@ bool TileMapper::loadFromJsonResource(const QString& levelResourcePath)
   solidGrid_.assign(static_cast<std::size_t>(levelHeight_),
                     std::vector<bool>(static_cast<std::size_t>(levelWidth_), false));
 
-  const QPixmap tileset(tilesetPath);
-  if (tileset.isNull()) return false;
+  tileset_.load(tilesetPath);
+  if (tileset_.isNull()) return false;
 
-  const int tilesetCols = tileset.width() / tileSizePx_;
-  const int tilesetRows = tileset.height() / tileSizePx_;
+  const int tilesetCols = tileset_.width() / tileSizePx_;
+  const int tilesetRows = tileset_.height() / tileSizePx_;
   if (tilesetCols <= 0 || tilesetRows <= 0) return false;
 
-  const QJsonArray tilesArray = root.value("tiles").toArray();
-  tiles_.reserve(static_cast<std::size_t>(tilesArray.size()));
+  const QJsonArray tileRectsArray = root.value("tileRects").toArray();
+  for (const QJsonValue& value : tileRectsArray)
+  {
+    if (!value.isObject()) continue;
+    const QJsonObject obj = value.toObject();
+    const int startX = obj.value("x").toInt(-1);
+    const int startY = obj.value("y").toInt(-1);
+    const int width = obj.value("width").toInt(0);
+    const int height = obj.value("height").toInt(0);
+    const int srcX = obj.value("srcX").toInt(-1);
+    const int srcY = obj.value("srcY").toInt(-1);
+    const int topSrcX = obj.value("topSrcX").toInt(srcX);
+    const int topSrcY = obj.value("topSrcY").toInt(srcY);
+    const bool solid = obj.value("solid").toBool(false);
+    for (int row = 0; row < height; ++row)
+    {
+      for (int column = 0; column < width; ++column)
+      {
+        addTile(
+            tileset_,
+            tilesetCols,
+            tilesetRows,
+            startX + column,
+            startY + row,
+            row == 0 ? topSrcX : srcX,
+            row == 0 ? topSrcY : srcY,
+            solid);
+      }
+    }
+  }
 
+  const QJsonArray tilesArray = root.value("tiles").toArray();
   for (const QJsonValue& value : tilesArray)
   {
     if (!value.isObject()) continue;
@@ -68,29 +121,279 @@ bool TileMapper::loadFromJsonResource(const QString& levelResourcePath)
     const int srcY = obj.value("srcY").toInt(-1);
     const bool solid = obj.value("solid").toBool(false);
 
-    if (x < 0 || y < 0 || srcX < 0 || srcY < 0) continue;
-    if (x >= levelWidth_ || y >= levelHeight_) continue;
-    if (srcX >= tilesetCols || srcY >= tilesetRows) continue;
+    addTile(tileset_, tilesetCols, tilesetRows, x, y, srcX, srcY, solid);
+  }
 
-    const QRect sourceRect(srcX * tileSizePx_, srcY * tileSizePx_, tileSizePx_, tileSizePx_);
-    const QPixmap tilePixmap = tileset.copy(sourceRect);
-    if (tilePixmap.isNull()) continue;
-
-    Tile tile;
-    tile.x = x;
-    tile.y = y;
-    tile.solid = solid;
-    solidGrid_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] = solid;
-    tile.pixmap = tilePixmap;
-    tiles_.push_back(tile);
-    if (x > maxOccupiedColumn_)
+  const auto parsePositions = [&](const char* key, std::vector<Position>& output)
+  {
+    const QJsonArray array = root.value(QString::fromUtf8(key)).toArray();
+    for (const QJsonValue& value : array)
     {
-      maxOccupiedColumn_ = x;
+      const QJsonObject object = value.toObject();
+      const int x = object.value("x").toInt(-1);
+      const int y = object.value("y").toInt(-1);
+      if (x >= 0 && y >= 0 && x < levelWidth_ && y < levelHeight_)
+      {
+        output.emplace_back(x, y);
+      }
     }
+  };
+  parsePositions("enemies", enemySpawns_);
+  parsePositions("coins", coinSpawns_);
+
+  const QJsonObject exitObject = root.value("exit").toObject();
+  const int exitX = exitObject.value("x").toInt(-1);
+  const int exitY = exitObject.value("y").toInt(-1);
+  if (exitX >= 0 && exitY >= 0 && exitX < levelWidth_ && exitY < levelHeight_)
+  {
+    levelExit_ = Position(exitX, exitY);
   }
 
   loaded_ = true;
   return true;
+}
+
+bool TileMapper::addTile(
+    const QPixmap& tileset,
+    int tilesetCols,
+    int tilesetRows,
+    int x,
+    int y,
+    int srcX,
+    int srcY,
+    bool solid)
+{
+  if (x < 0 || y < 0 || srcX < 0 || srcY < 0) return false;
+  if (x >= levelWidth_ || y >= levelHeight_) return false;
+  if (srcX >= tilesetCols || srcY >= tilesetRows) return false;
+
+  const QRect sourceRect(srcX * tileSizePx_, srcY * tileSizePx_, tileSizePx_, tileSizePx_);
+  const QPixmap tilePixmap = tileset.copy(sourceRect);
+  if (tilePixmap.isNull()) return false;
+
+  Tile tile;
+  tile.x = x;
+  tile.y = y;
+  tile.solid = solid;
+  tile.srcX = srcX;
+  tile.srcY = srcY;
+  tile.pixmap = tilePixmap;
+  tiles_.push_back(std::move(tile));
+  solidGrid_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] =
+      solidGrid_[static_cast<std::size_t>(y)][static_cast<std::size_t>(x)] || solid;
+  maxOccupiedColumn_ = std::max(maxOccupiedColumn_, x);
+  return true;
+}
+
+bool TileMapper::paintTile(int gridX, int gridY, int srcX, int srcY, bool solid)
+{
+  if (!loaded_ || tileset_.isNull())
+  {
+    return false;
+  }
+  removeTile(gridX, gridY);
+  return addTile(
+      tileset_,
+      tileset_.width() / tileSizePx_,
+      tileset_.height() / tileSizePx_,
+      gridX,
+      gridY,
+      srcX,
+      srcY,
+      solid);
+}
+
+bool TileMapper::removeTile(int gridX, int gridY)
+{
+  if (!loaded_ || gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  const auto oldSize = tiles_.size();
+  tiles_.erase(
+      std::remove_if(
+          tiles_.begin(),
+          tiles_.end(),
+          [&](const Tile& tile)
+          {
+            return tile.x == gridX && tile.y == gridY;
+          }),
+      tiles_.end());
+  solidGrid_[static_cast<std::size_t>(gridY)][static_cast<std::size_t>(gridX)] = false;
+  maxOccupiedColumn_ = 0;
+  for (const Tile& tile : tiles_)
+  {
+    maxOccupiedColumn_ = std::max(maxOccupiedColumn_, tile.x);
+  }
+  return oldSize != tiles_.size();
+}
+
+bool TileMapper::setPlayerStart(int gridX, int gridY)
+{
+  if (gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  hasPlayerStart_ = true;
+  playerStartX_ = gridX;
+  playerStartY_ = gridY;
+  return true;
+}
+
+bool TileMapper::toggleEnemySpawn(int gridX, int gridY)
+{
+  if (gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  const Position target(gridX, gridY);
+  const auto it = std::find(enemySpawns_.begin(), enemySpawns_.end(), target);
+  if (it != enemySpawns_.end())
+  {
+    enemySpawns_.erase(it);
+  }
+  else
+  {
+    enemySpawns_.push_back(target);
+  }
+  return true;
+}
+
+bool TileMapper::toggleCoinSpawn(int gridX, int gridY)
+{
+  if (gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  const Position target(gridX, gridY);
+  const auto it = std::find(coinSpawns_.begin(), coinSpawns_.end(), target);
+  if (it != coinSpawns_.end())
+  {
+    coinSpawns_.erase(it);
+  }
+  else
+  {
+    coinSpawns_.push_back(target);
+  }
+  return true;
+}
+
+bool TileMapper::setLevelExit(int gridX, int gridY)
+{
+  if (gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  levelExit_ = Position(gridX, gridY);
+  return true;
+}
+
+void TileMapper::removeEntitiesAt(int gridX, int gridY)
+{
+  const Position target(gridX, gridY);
+  enemySpawns_.erase(
+      std::remove(enemySpawns_.begin(), enemySpawns_.end(), target),
+      enemySpawns_.end());
+  coinSpawns_.erase(
+      std::remove(coinSpawns_.begin(), coinSpawns_.end(), target),
+      coinSpawns_.end());
+  if (levelExit_ && *levelExit_ == target)
+  {
+    levelExit_.reset();
+  }
+}
+
+bool TileMapper::saveToJsonFile(const QString& levelFilePath) const
+{
+  if (!loaded_)
+  {
+    return false;
+  }
+
+  QJsonArray tileArray;
+  for (const Tile& tile : tiles_)
+  {
+    tileArray.append(QJsonObject{
+        {QString::fromUtf8("x"), tile.x},
+        {QString::fromUtf8("y"), tile.y},
+        {QString::fromUtf8("srcX"), tile.srcX},
+        {QString::fromUtf8("srcY"), tile.srcY},
+        {QString::fromUtf8("solid"), tile.solid}});
+  }
+
+  const auto positionsToJson = [](const std::vector<Position>& positions)
+  {
+    QJsonArray array;
+    for (const Position& position : positions)
+    {
+      array.append(QJsonObject{
+          {QString::fromUtf8("x"), static_cast<int>(position.x())},
+          {QString::fromUtf8("y"), static_cast<int>(position.y())}});
+    }
+    return array;
+  };
+
+  QJsonObject root{
+      {QString::fromUtf8("id"), QString::fromUtf8("custom_level")},
+      {QString::fromUtf8("name"), QString::fromUtf8("Custom Level")},
+      {QString::fromUtf8("displayName"), QString::fromUtf8("Custom Level")},
+      {QString::fromUtf8("width"), levelWidth_},
+      {QString::fromUtf8("height"), levelHeight_},
+      {QString::fromUtf8("tileSize"), tileSizePx_},
+      {QString::fromUtf8("tileset"), QString::fromUtf8(":/tiles/tileset.png")},
+      {QString::fromUtf8("playerStart"), QJsonObject{
+          {QString::fromUtf8("x"), playerStartX_},
+          {QString::fromUtf8("y"), playerStartY_}}},
+      {QString::fromUtf8("tiles"), tileArray},
+      {QString::fromUtf8("enemies"), positionsToJson(enemySpawns_)},
+      {QString::fromUtf8("coins"), positionsToJson(coinSpawns_)}};
+
+  if (levelExit_)
+  {
+    root.insert(QString::fromUtf8("exit"), QJsonObject{
+        {QString::fromUtf8("x"), static_cast<int>(levelExit_->x())},
+        {QString::fromUtf8("y"), static_cast<int>(levelExit_->y())}});
+  }
+
+  QDir().mkpath(QFileInfo(levelFilePath).absolutePath());
+  QSaveFile file(levelFilePath);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+  {
+    return false;
+  }
+  file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+  return file.commit();
+}
+
+Position TileMapper::safePlayerStart() const
+{
+  if (!loaded_ || levelWidth_ <= 0 || levelHeight_ <= 0)
+  {
+    return Position();
+  }
+
+  int x = std::clamp(playerStartX_, 0, levelWidth_ - 1);
+  int y = std::clamp(playerStartY_, 0, levelHeight_ - 1);
+  if (!isSolidAt(x, y) && (y + 1 >= levelHeight_ || isSolidAt(x, y + 1)))
+  {
+    return Position(x, y);
+  }
+
+  for (int distance = 0; distance < levelHeight_; ++distance)
+  {
+    const int candidates[] = {y - distance, y + distance};
+    for (const int candidateY : candidates)
+    {
+      if (candidateY < 0 || candidateY >= levelHeight_) continue;
+      if (!isSolidAt(x, candidateY) &&
+          (candidateY + 1 >= levelHeight_ || isSolidAt(x, candidateY + 1)))
+      {
+        return Position(x, candidateY);
+      }
+    }
+  }
+
+  return Position(x, 0);
 }
 
 bool TileMapper::isSolidAt(int gridX, int gridY) const
@@ -114,4 +417,62 @@ void TileMapper::render(QPainter& painter, int tileSizePx, int cameraOffsetXPx) 
         tileSizePx);
     painter.drawPixmap(targetRect, tile.pixmap);
   }
+}
+
+void TileMapper::renderEditorMarkers(QPainter& painter, int tileSizePx, int cameraOffsetXPx) const
+{
+  if (!loaded_ || tileSizePx <= 0)
+  {
+    return;
+  }
+
+  const auto markerRect = [&](const Position& position)
+  {
+    return QRect(
+        position.x() * tileSizePx - cameraOffsetXPx + 3,
+        position.y() * tileSizePx + 3,
+        tileSizePx - 6,
+        tileSizePx - 6);
+  };
+
+  painter.save();
+  painter.setRenderHint(QPainter::Antialiasing, true);
+
+  if (hasPlayerStart_)
+  {
+    painter.setPen(QPen(QColor(230, 245, 255), 2));
+    painter.setBrush(QColor(30, 150, 230, 180));
+    const QRect rect = markerRect(Position(playerStartX_, playerStartY_));
+    painter.drawEllipse(rect);
+    painter.drawText(rect, Qt::AlignCenter, QString::fromUtf8("P"));
+  }
+
+  for (const Position& enemy : enemySpawns_)
+  {
+    painter.setPen(QPen(QColor(255, 210, 210), 2));
+    painter.setBrush(QColor(180, 35, 55, 190));
+    const QRect rect = markerRect(enemy);
+    painter.drawRect(rect);
+    painter.drawText(rect, Qt::AlignCenter, QString::fromUtf8("E"));
+  }
+
+  for (const Position& coin : coinSpawns_)
+  {
+    painter.setPen(QPen(QColor(255, 245, 170), 2));
+    painter.setBrush(QColor(230, 165, 20, 190));
+    const QRect rect = markerRect(coin);
+    painter.drawEllipse(rect);
+    painter.drawText(rect, Qt::AlignCenter, QString::fromUtf8("C"));
+  }
+
+  if (levelExit_)
+  {
+    painter.setPen(QPen(QColor(180, 255, 255), 2));
+    painter.setBrush(QColor(20, 170, 180, 180));
+    const QRect rect = markerRect(*levelExit_);
+    painter.drawRoundedRect(rect, 4, 4);
+    painter.drawText(rect, Qt::AlignCenter, QString::fromUtf8("X"));
+  }
+
+  painter.restore();
 }

@@ -43,7 +43,7 @@ private:
     bool loop = true;
   };
 
-  PlayerAnimationState resolveGroundedState(const InputState& input) const;
+  PlayerAnimationState resolveGroundedState(const InputState& input, const Engine& engine) const;
   void setVisualWindow(const ClipWindow& window);
   int windowFrameCount(const AssetRepository& assets) const;
   void transitionToAirPhase(AirPhase nextPhase);

@@ -6,12 +6,12 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 QUIET COMPONENTS Widgets Multimedia MultimediaWidgets)
+find_package(Qt6 QUIET COMPONENTS Widgets Multimedia)
 if (Qt6_FOUND)
     set(QT_PACKAGE_PREFIX "Qt6")
     set(QT_VERSION_MAJOR 6)
 else()
-    find_package(Qt5 QUIET COMPONENTS Widgets Multimedia MultimediaWidgets)
+    find_package(Qt5 QUIET COMPONENTS Widgets Multimedia)
     if (Qt5_FOUND)
         set(QT_PACKAGE_PREFIX "Qt5")
         set(QT_VERSION_MAJOR 5)
@@ -25,6 +25,11 @@ if (DEFINED QT_PACKAGE_PREFIX)
         mainwindow.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/tilemapper.h
         tilemapper.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/save_game_repository.h
+        save_game_repository.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/settings_repository.h
+        settings_repository.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/game_settings.h
         ${CMAKE_SOURCE_DIR}/include/game/app/game_controller.h
         ${CMAKE_SOURCE_DIR}/include/game/app/input_mapper.h
         ${CMAKE_SOURCE_DIR}/include/game/app/input_state.h
@@ -45,6 +50,12 @@ if (DEFINED QT_PACKAGE_PREFIX)
         ${CMAKE_SOURCE_DIR}/src/renderer/scene_renderer.cpp
         mainwindow.ui
         ${CMAKE_SOURCE_DIR}/assets/qt/resources.qrc
+        ${CMAKE_SOURCE_DIR}/assets/app/BladeOfShadows.icns
+    )
+
+    set_source_files_properties(
+        ${CMAKE_SOURCE_DIR}/assets/app/BladeOfShadows.icns
+        PROPERTIES MACOSX_PACKAGE_LOCATION "Resources"
     )
 
     if (QT_VERSION_MAJOR GREATER_EQUAL 6)
@@ -62,11 +73,13 @@ if (DEFINED QT_PACKAGE_PREFIX)
         game_core
         ${QT_PACKAGE_PREFIX}::Widgets
         ${QT_PACKAGE_PREFIX}::Multimedia
-        ${QT_PACKAGE_PREFIX}::MultimediaWidgets
     )
 
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+        OUTPUT_NAME "BladeOfShadows"
+        MACOSX_BUNDLE_GUI_IDENTIFIER com.dhunanyan.bladeofshadows
+        MACOSX_BUNDLE_BUNDLE_NAME "Blade of Shadows"
+        MACOSX_BUNDLE_ICON_FILE "BladeOfShadows.icns"
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
         MACOSX_BUNDLE TRUE
@@ -75,6 +88,7 @@ if (DEFINED QT_PACKAGE_PREFIX)
 
     install(TARGETS ${PROJECT_NAME}
         BUNDLE DESTINATION .
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 

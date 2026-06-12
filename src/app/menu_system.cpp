@@ -8,7 +8,7 @@ void MenuSystem::registerMenu(MenuDefinition menu)
   {
     return;
   }
-  selectedIndices_[menu.id] = 0;
+  selectedIndices_.try_emplace(menu.id, 0);
   menus_[menu.id] = std::move(menu);
 }
 
@@ -41,6 +41,11 @@ bool MenuSystem::popMenu()
   }
   stack_.pop_back();
   return true;
+}
+
+void MenuSystem::close()
+{
+  stack_.clear();
 }
 
 void MenuSystem::moveSelection(int delta)
@@ -84,10 +89,10 @@ bool MenuSystem::activateSelected()
   }
 
   const int index = std::clamp(selectedIndexForCurrentMenu(), 0, static_cast<int>(menu->items.size()) - 1);
-  const auto& item = menu->items[static_cast<std::size_t>(index)];
-  if (item.onActivate)
+  const auto callback = menu->items[static_cast<std::size_t>(index)].onActivate;
+  if (callback)
   {
-    item.onActivate();
+    callback();
     return true;
   }
   return false;

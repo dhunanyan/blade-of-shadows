@@ -54,7 +54,7 @@ TEST_F(ObjectTester, movingObject)
     ADD_FAILURE() << "Not implemented: UNIMPLEMENTED_movingObject";
 #else
     const Position position(10, 13);
-    const Position positionAfterMovingUp(position.x(), position.y()+1);
+    const Position positionAfterMovingUp(position.x(), position.y()-1);
     const Position positionAfterMovingLeft(position.x()-1, position.y());
     const ObjectType objectType = ObjectType::OBJECT_PLAYER;
 
@@ -76,4 +76,14 @@ TEST_F(ObjectTester, movingObject)
     ASSERT_EQ(position.x(), object.position().x());
     ASSERT_EQ(position.y(), object.position().y());
 #endif
+}
+
+TEST_F(ObjectTester, movingLeftAndUpCanRepresentNegativeCoordinates)
+{
+    Object object(ObjectType::OBJECT_UNKNOWN, Position(0, 0));
+    object.moveLeft();
+    object.moveUp();
+
+    EXPECT_EQ(-1, object.position().x());
+    EXPECT_EQ(-1, object.position().y());
 }

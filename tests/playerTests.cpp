@@ -34,7 +34,7 @@ TEST_F(PlayerTester, playerCanMoveLikeObject)
     ADD_FAILURE() << "Not implemented UNIMPLEMENTED_playerIsObject";
 #else
     const Position position(5, 6);
-    const Position positionAfterMoving(6, 7);
+    const Position positionAfterMoving(6, 5);
 
     Player player;
     player.setPosition(position);
@@ -75,4 +75,22 @@ TEST_F(PlayerTester, playerCanDie)
 
     ASSERT_FALSE(player.isAlive());
 #endif
+}
+
+TEST_F(PlayerTester, healthCoinsAndScoreAreClampedAndReset)
+{
+    Player player;
+    player.takeDamage(2);
+    player.addCoin(3);
+    player.addScore(120);
+
+    EXPECT_EQ(3, player.health());
+    EXPECT_EQ(3, player.coins());
+    EXPECT_EQ(120, player.score());
+
+    player.resetProgress();
+    EXPECT_EQ(player.maxHealth(), player.health());
+    EXPECT_EQ(0, player.coins());
+    EXPECT_EQ(0, player.score());
+    EXPECT_TRUE(player.isAlive());
 }

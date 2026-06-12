@@ -8,12 +8,14 @@ Stage::Stage(std::size_t width, std::size_t height)
 
 std::size_t Stage::position2Index(Position position) const
 {
-  return position.x_ + position.y_ * width_;
+  return static_cast<std::size_t>(position.x_) +
+         static_cast<std::size_t>(position.y_) * width_;
 }
 
 bool Stage::isInside(Position position) const
 {
-  auto [x, y] = position;
-  return x == std::clamp(x, static_cast<std::size_t>(0), width() - 1)
-      && y == std::clamp(y, static_cast<std::size_t>(0), height() - 1);
+  return position.x() >= 0 &&
+         position.y() >= 0 &&
+         static_cast<std::size_t>(position.x()) < width() &&
+         static_cast<std::size_t>(position.y()) < height();
 }

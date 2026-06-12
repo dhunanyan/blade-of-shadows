@@ -5,6 +5,8 @@
         <file alias="background_layer_3.png">../images/background/background_layer_3.png</file>
         <file alias="tiles/tileset.png">../images/tiles/tileset.png</file>
         <file alias="levels/sample_level.json">../levels/sample_level.json</file>
+        <file alias="levels/level_01.json">../levels/level_01.json</file>
+        <file alias="levels/level_02.json">../levels/level_02.json</file>
         <file alias="player/damage/01.png">../images/player/damage/01.png</file>
         <file alias="player/damage/02.png">../images/player/damage/02.png</file>
         <file alias="player/damage/03.png">../images/player/damage/03.png</file>
@@ -94,8 +96,14 @@
         <file alias="player/sword/03.png">../images/player/sword/03.png</file>
         <file alias="player/sword/04.png">../images/player/sword/04.png</file>
         <file alias="player/sword/05.png">../images/player/sword/05.png</file>
-        <file alias="enemy.png">../images/enemy/enemy.png</file>
+        <file alias="enemy.png">../images/enemy/placeholders/shadow_ninja.png</file>
+        <file alias="ui/heart.png">../images/ui/heart.png</file>
+        <file alias="ui/coin.png">../images/ui/coin.png</file>
         <file alias="music.mp3">../audio/music.mp3</file>
         <file alias="musicAfterLoosing.mp3">../audio/musicAfterLoosing.mp3</file>
+        <file alias="audio/attack.wav">../audio/sfx/attack.wav</file>
+        <file alias="audio/jump.wav">../audio/sfx/jump.wav</file>
+        <file alias="audio/coin.wav">../audio/sfx/coin.wav</file>
+        <file alias="audio/hurt.wav">../audio/sfx/hurt.wav</file>
     </qresource>
 </RCC>

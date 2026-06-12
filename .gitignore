@@ -3,6 +3,10 @@ build/
 doxygen/
 build-ci-gui/
 build-ci-tests/
+build-audit-gui/
+build-audit-tests/
+build-*/
+dist/
 
 ### Temporary playgrounds ###
 temp/
@@ -16,4 +20,4 @@ temp/
 tests/lib/
 
 ### local machine ###
-.DS_STORE
+.DS_Store

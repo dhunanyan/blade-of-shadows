@@ -39,6 +39,7 @@ public:
   void setSelection(int index);
   bool activateSelected();
   bool activateAt(int index);
+  void close();
 
   bool isOpen() const
   {

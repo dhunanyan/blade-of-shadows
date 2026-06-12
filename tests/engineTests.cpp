@@ -86,7 +86,9 @@ TEST_F(EngineTester, engineCanMovePlayer)
 
 struct EnemyRandomPositionGenerator
 {
-    inline static unsigned startingX=0, startingY=0, generatedEnemies={};
+    inline static int startingX = 0;
+    inline static int startingY = 0;
+    inline static unsigned generatedEnemies = 0;
     static Position getNextPosition(int, int)
     {
         ++generatedEnemies;
@@ -114,4 +116,142 @@ TEST_F(EngineTester, engineHandlesEnemies)
         ASSERT_EQ(i, enemies[i]->position().y()) << "i=" << i;
     }
 #endif
+}
+
+TEST_F(EngineTester, sessionLoadsDeterministicEntitiesAndCollectsCoins)
+{
+    EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y >= 6;
+    });
+
+    const Position spawn(2, 5);
+    engine.resetSession(
+        spawn,
+        {Position(8, 5)},
+        {spawn, Position(4, 5)},
+        Position(9, 5));
+
+    ASSERT_EQ(1, engine.enemies().size());
+    ASSERT_EQ(2, engine.coins().size());
+
+    engine.update();
+
+    EXPECT_EQ(1, engine.playerCoins());
+    EXPECT_EQ(10, engine.playerScore());
+    EXPECT_EQ(1, engine.coins().size());
+    EXPECT_FALSE(engine.isLevelComplete());
+}
+
+TEST_F(EngineTester, attackDamagesEnemyOnlyOncePerSwing)
+{
+    EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y >= 6;
+    });
+    engine.resetSession(
+        Position(2, 5),
+        {Position(3, 5)},
+        {},
+        std::nullopt);
+    engine.setPlayerDirection(Direction::RIGHT);
+    engine.requestPlayerAttack();
+
+    for (int tick = 0; tick < 12; ++tick)
+    {
+        engine.update();
+    }
+
+    ASSERT_EQ(1, engine.enemies().size());
+    EXPECT_FLOAT_EQ(50.0f, engine.enemies().front()->life());
+}
+
+TEST_F(EngineTester, enemyContactDamagesPlayerAndAppliesCooldown)
+{
+    EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y >= 6;
+    });
+    engine.resetSession(
+        Position(2, 5),
+        {Position(2, 5)},
+        {},
+        std::nullopt);
+
+    engine.update();
+    EXPECT_EQ(4, engine.playerHealth());
+
+    engine.update();
+    EXPECT_EQ(4, engine.playerHealth());
+}
+
+TEST_F(EngineTester, snapshotRestoresProgressAndWorldState)
+{
+    EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y >= 6;
+    });
+    engine.resetSession(
+        Position(2, 5),
+        {Position(8, 5)},
+        {Position(4, 5)},
+        Position(9, 5));
+
+    Engine::Snapshot state = engine.snapshot();
+    state.playerHealth = 3;
+    state.coins = 7;
+    state.score = 420;
+    engine.restoreSnapshot(state);
+
+    EXPECT_EQ(3, engine.playerHealth());
+    EXPECT_EQ(7, engine.playerCoins());
+    EXPECT_EQ(420, engine.playerScore());
+    EXPECT_EQ(1, engine.coins().size());
+    EXPECT_EQ(1, engine.enemies().size());
+}
+
+TEST_F(EngineTester, invalidPlayerPositionIsRejected)
+{
+    EngineUnderTest engine(width, height);
+    const Position original = engine.playerPosition();
+
+    engine.setPlayerPosition(Position(-1, 2));
+    EXPECT_EQ(original, engine.playerPosition());
+}
+
+TEST_F(EngineTester, dodgeMovesPlayerAndPreventsContactDamage)
+{
+    EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y >= 6;
+    });
+    engine.resetSession(
+        Position(2, 5),
+        {Position(2, 5)},
+        {},
+        std::nullopt);
+
+    const float originalX = engine.playerPixelX();
+    engine.requestPlayerDodge();
+    engine.update();
+
+    EXPECT_TRUE(engine.isPlayerDodging());
+    EXPECT_GT(engine.playerPixelX(), originalX);
+    EXPECT_EQ(engine.playerMaxHealth(), engine.playerHealth());
+}
+
+TEST_F(EngineTester, jumpStopsAtSolidCeiling)
+{
+    EngineUnderTest engine(width, height);
+    engine.setSolidQuery([&](int, int y) {
+        return y == 4 || y >= 6;
+    });
+    engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
+
+    const float originalY = engine.playerPixelY();
+    engine.requestPlayerJump();
+    engine.update();
+
+    EXPECT_FLOAT_EQ(originalY, engine.playerPixelY());
+    EXPECT_FLOAT_EQ(0.0f, engine.playerVelocityY());
 }

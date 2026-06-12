@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 #include <memory> // std::shared_ptr && std::unique_ptr
@@ -19,6 +20,26 @@ Position generateNewEnemyPosition(int width, int height);
 class Engine
 {
 public:
+  struct Snapshot
+  {
+    struct EnemyState
+    {
+      Position position;
+      float life = 100.0f;
+      float maxLife = 100.0f;
+    };
+
+    float playerPixelX = 0.0f;
+    float playerPixelY = 0.0f;
+    int playerHealth = 5;
+    int playerMaxHealth = 5;
+    int coins = 0;
+    int score = 0;
+    std::vector<Position> remainingCoins;
+    std::vector<EnemyState> enemies;
+    bool levelComplete = false;
+  };
+
   Engine(std::size_t stageWidth, std::size_t stageHeight);
   ~Engine();
 
@@ -50,6 +71,13 @@ public:
   {
     return player_.isAlive();
   }
+  int playerHealth() const { return player_.health(); }
+  int playerMaxHealth() const { return player_.maxHealth(); }
+  int playerCoins() const { return player_.coins(); }
+  int playerScore() const { return player_.score(); }
+  bool isLevelComplete() const { return levelComplete_; }
+  const std::vector<Position>& coins() const { return coins_; }
+  const std::optional<Position>& levelExit() const { return levelExit_; }
   void setPlayerPosition(const Position& position)
   {
     if (!stage_.isInside(position))
@@ -58,16 +86,8 @@ public:
     }
     player_.setPosition(position);
   }
-  void setPlayerPixelX(float pixelX)
-  {
-    playerPixelX_ = pixelX;
-    syncPlayerGridPosition();
-  }
-  void setPlayerPixelY(float pixelY)
-  {
-    playerPixelY_ = pixelY;
-    syncPlayerGridPosition();
-  }
+  void setPlayerPixelX(float pixelX);
+  void setPlayerPixelY(float pixelY);
   void setPlayerMoveIntentX(int intentX)
   {
     playerMoveIntentX_ = std::clamp(intentX, -1, 1);
@@ -100,6 +120,8 @@ public:
   {
     player_.setJumpRequested(true);
   }
+  void requestPlayerDodge() { player_.setDodgeRequested(true); }
+  bool isPlayerDodging() const { return player_.isDodging(); }
   void setPlayerJumpHeld(bool isHeld)
   {
     player_.setJumpHeld(isHeld);
@@ -117,6 +139,13 @@ public:
     return player_.doubleJumpFxTicks();
   }
   bool willPlayerTouchGroundSoon(float lookAheadPx) const;
+  void resetSession(
+      Position playerSpawn,
+      const std::vector<Position>& enemySpawns,
+      const std::vector<Position>& coinSpawns,
+      std::optional<Position> levelExit);
+  Snapshot snapshot() const;
+  void restoreSnapshot(const Snapshot& snapshot);
   void setSolidQuery(std::function<bool(int, int)> solidQuery)
   {
     solidQuery_ = std::move(solidQuery);
@@ -134,8 +163,14 @@ protected:
   void randEnemies(Position (*positionGenerator)(int, int)=generateNewEnemyPosition);
   void updateEnemies();
   void updatePlayerAttackState(Player& player);
+  void updatePlayerDodgeState(Player& player);
   void applyHorizontalMovement(Player& player);
   void syncPlayerGridPosition();
+  void resolvePlayerAttack();
+  void resolveEnemyContact();
+  void resolveCollectibles();
+  void resolveLevelExit();
+  bool canEnemyOccupy(const Position& position) const;
 
 private:
   bool isSolidAt(int gridX, int gridY) const;
@@ -151,6 +186,10 @@ private:
   float playerPixelX_ = 0.0f;
   float playerPixelY_ = 0.0f;
   int playerMoveIntentX_ = 0;
+  std::vector<Position> coins_;
+  std::optional<Position> levelExit_;
+  bool levelComplete_ = false;
+  int updateTick_ = 0;
 };
 
 #endif // GAME_CORE_ENGINE_H

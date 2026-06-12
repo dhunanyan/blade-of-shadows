@@ -22,8 +22,10 @@ on_exit() {
 }
 trap on_exit EXIT
 
-GAME_BIN="./${BUILD_DIR}/bin/game"
-GAME_APP_BIN="./${BUILD_DIR}/bin/game.app/Contents/MacOS/game"
+GAME_BIN="./${BUILD_DIR}/bin/BladeOfShadows"
+LEGACY_GAME_BIN="./${BUILD_DIR}/bin/game"
+GAME_APP_BIN="./${BUILD_DIR}/bin/BladeOfShadows.app/Contents/MacOS/BladeOfShadows"
+LEGACY_GAME_APP_BIN="./${BUILD_DIR}/bin/game.app/Contents/MacOS/game"
 
 if [ -x "${GAME_BIN}" ]; then
   log_ok "Launching GUI ${CLR_BLUE}${GAME_BIN}${CLR_RESET}"
@@ -31,7 +33,13 @@ if [ -x "${GAME_BIN}" ]; then
 elif [ -x "${GAME_APP_BIN}" ]; then
   log_ok "Launching GUI ${CLR_BLUE}${GAME_APP_BIN}${CLR_RESET}"
   "${GAME_APP_BIN}"
+elif [ -x "${LEGACY_GAME_BIN}" ]; then
+  log_ok "Launching GUI ${CLR_BLUE}${LEGACY_GAME_BIN}${CLR_RESET}"
+  "${LEGACY_GAME_BIN}"
+elif [ -x "${LEGACY_GAME_APP_BIN}" ]; then
+  log_ok "Launching GUI ${CLR_BLUE}${LEGACY_GAME_APP_BIN}${CLR_RESET}"
+  "${LEGACY_GAME_APP_BIN}"
 else
-  log_err "Could not find ${GAME_BIN} or ${GAME_APP_BIN}. Run ./scripts/build.sh ${BUILD_DIR} first."
+  log_err "Could not find the Blade of Shadows executable. Run ./scripts/build.sh ${BUILD_DIR} first."
   exit 1
 fi

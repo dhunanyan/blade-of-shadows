@@ -2,8 +2,11 @@
 #define GAME_APP_GAME_CONTROLLER_H
 
 #include <cstddef>
+#include <functional>
+#include <string>
 #include "game/app/input_state.h"
 #include "game/app/menu_system.h"
+#include "game/app/game_settings.h"
 #include "game/core/engine.h"
 
 enum class GameMode
@@ -49,6 +52,19 @@ public:
   {
     return shouldQuit_;
   }
+  const GameSettings& settings() const { return settings_; }
+  void setSettings(const GameSettings& settings);
+  void setNewGameHandler(std::function<void(bool)> handler) { newGameHandler_ = std::move(handler); }
+  void setNextLevelHandler(std::function<bool()> handler) { nextLevelHandler_ = std::move(handler); }
+  void setSaveGameHandler(std::function<bool()> handler) { saveGameHandler_ = std::move(handler); }
+  void setLoadGameHandler(std::function<bool()> handler) { loadGameHandler_ = std::move(handler); }
+  void setLevelEditorHandler(std::function<void()> handler) { levelEditorHandler_ = std::move(handler); }
+  void setSaveLevelHandler(std::function<bool()> handler) { saveLevelHandler_ = std::move(handler); }
+  void setPlayEditedLevelHandler(std::function<void()> handler) { playEditedLevelHandler_ = std::move(handler); }
+  void setSettingsChangedHandler(std::function<void(const GameSettings&)> handler)
+  {
+    settingsChangedHandler_ = std::move(handler);
+  }
 
   void onKeyEvent(int key, bool isPressed, bool isAutoRepeat);
   void onMenuHover(int hoveredIndex);
@@ -58,9 +74,18 @@ public:
 
 private:
   void buildMenus();
-  void startGame();
+  void startGame(bool newCampaign = false);
+  void startNextLevel();
   void startLevelEditor();
   void resumeFromPause();
+  void saveGame();
+  void saveLevel();
+  void playEditedLevel();
+  void loadGame();
+  void returnToMainMenu();
+  void rebuildOptionsMenu();
+  void notifySettingsChanged();
+  std::string text(const char* english, const char* polish) const;
 
 private:
   Engine engine_;
@@ -69,6 +94,15 @@ private:
   GameMode mode_ = GameMode::Menu;
   GameMode modeBeforePause_ = GameMode::Playing;
   bool shouldQuit_ = false;
+  GameSettings settings_;
+  std::function<void(bool)> newGameHandler_;
+  std::function<bool()> nextLevelHandler_;
+  std::function<bool()> saveGameHandler_;
+  std::function<bool()> loadGameHandler_;
+  std::function<void()> levelEditorHandler_;
+  std::function<bool()> saveLevelHandler_;
+  std::function<void()> playEditedLevelHandler_;
+  std::function<void(const GameSettings&)> settingsChangedHandler_;
 };
 
 #endif // GAME_APP_GAME_CONTROLLER_H

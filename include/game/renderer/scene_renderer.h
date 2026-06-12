@@ -4,6 +4,7 @@
 #include <QPixmap>
 #include <QPoint>
 #include <QSize>
+#include "game/app/game_settings.h"
 
 class QPainter;
 class AssetRepository;
@@ -23,8 +24,11 @@ public:
       const PlayerPresentation& playerPresentation,
       const MenuView& menuView,
       int tileSizePx,
-      int playerScale) const;
+      int playerScale,
+      bool editorMode = false,
+      GameLanguage language = GameLanguage::English) const;
   int menuItemAtPoint(const MenuView& menuView, const QSize& targetSize, const QPoint& point) const;
+  float cameraOffsetX() const { return cameraX_; }
 
 private:
   float updateCameraX(const Engine& engine, const QSize& viewportSize, float maxCameraX) const;
@@ -49,6 +53,23 @@ private:
       const AssetRepository& assets,
       int cameraOffsetXPx,
       int tileSizePx) const;
+  void drawWorldItems(
+      QPainter& painter,
+      const Engine& engine,
+      const AssetRepository& assets,
+      int cameraOffsetXPx,
+      int tileSizePx) const;
+  void drawHud(
+      QPainter& painter,
+      const Engine& engine,
+      const AssetRepository& assets,
+      const QSize& targetSize,
+      GameLanguage language) const;
+  void drawEditorOverlay(
+      QPainter& painter,
+      const QSize& targetSize,
+      int tileSizePx,
+      GameLanguage language) const;
   void drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const;
   void drawMenuOverlay(QPainter& painter, const QSize& targetSize, const MenuView& menuView) const;
 

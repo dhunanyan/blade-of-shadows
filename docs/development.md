@@ -1,41 +1,50 @@
-# Development Workflow
+# Development
 
-## Build and Run
-
-Build GUI app:
+## Standard Workflow
 
 ```bash
 ./scripts/build.sh
-```
-
-Run GUI app:
-
-```bash
+./scripts/test.sh
 ./scripts/start.sh
 ```
 
-## Tests
-
-Run tests:
+Use an isolated build directory when testing build-system changes:
 
 ```bash
-./scripts/test.sh
+./scripts/build.sh build-local
+./scripts/test.sh build-local-tests
 ```
 
-The first script call will ensure `tests/lib` exists by cloning:
-- `https://github.com/google/googletest.git`
+## Quality Checks
 
-## Common Commands
+- Keep Qt types out of `include/game/core` and `src/core`.
+- Add focused tests for gameplay rules and regressions.
+- Build both `game` and `tests` before committing.
+- Preserve `assets/levels/sample_level.json` when it contains local editor experiments.
+- Do not commit `build-*`, `dist`, or runtime-fetched `tests/lib`.
 
-Use a custom build directory:
+## Placeholder Assets
+
+The generated placeholder sound effects can be recreated with:
 
 ```bash
-./scripts/build.sh build-debug
-./scripts/start.sh build-debug
-./scripts/test.sh build-debug
+.venv/bin/python scripts/generate_placeholder_sfx.py
 ```
 
-## Troubleshooting
+Final enemy, heart, and coin files can replace the current PNGs while keeping the aliases in `assets/qt/resources.qrc`.
 
-- If Qt is not discovered automatically, install `qt` or `qt@6` with Homebrew.
-- If test dependencies are broken, remove `tests/lib` and run scripts again.
+## Packaging
+
+```bash
+./scripts/package.sh build-release dist
+```
+
+On macOS, the script uses `macdeployqt` when available and creates a DMG. On other platforms it installs into a staging directory and creates a compressed archive.
+
+Local macOS packages receive an ad-hoc signature automatically. To create a
+Developer ID-signed bundle before notarization, provide the signing identity:
+
+```bash
+CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  ./scripts/package.sh build-release dist
+```

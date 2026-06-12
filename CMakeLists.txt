@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
-project(blade_of_shadows LANGUAGES CXX)
+project(blade_of_shadows VERSION 1.0.0 LANGUAGES CXX)
+
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -54,3 +56,5 @@ endif()
 
 add_subdirectory(tests)
 add_subdirectory(src/app/qt)
+
+include(CPack)

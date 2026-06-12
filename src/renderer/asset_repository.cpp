@@ -6,6 +6,8 @@ bool AssetRepository::loadAll()
   backgroundLayer2_.load(QString::fromUtf8(":/background_layer_2.png"));
   backgroundLayer3_.load(QString::fromUtf8(":/background_layer_3.png"));
   enemyTexture_.load(QString::fromUtf8(":/enemy.png"));
+  heartIcon_.load(QString::fromUtf8(":/ui/heart.png"));
+  coinIcon_.load(QString::fromUtf8(":/ui/coin.png"));
 
   playerClips_[PlayerAnimationState::Damage] = loadFrameRange(QString::fromUtf8(":/player/damage"), 1, 8);
   playerClips_[PlayerAnimationState::Death] = loadFrameRange(QString::fromUtf8(":/player/death"), 1, 4);
@@ -32,7 +34,9 @@ bool AssetRepository::loadAll()
   bool ok = !backgroundLayer1_.isNull() &&
             !backgroundLayer2_.isNull() &&
             !backgroundLayer3_.isNull() &&
-            !enemyTexture_.isNull();
+            !enemyTexture_.isNull() &&
+            !heartIcon_.isNull() &&
+            !coinIcon_.isNull();
 
   for (const auto& [state, clip] : playerClips_)
   {

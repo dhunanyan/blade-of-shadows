@@ -6,6 +6,7 @@ file(GLOB TEST_SOURCES *.cpp *.cc *.c)
 message(" + Found test files: ${TEST_SOURCES}")
 
 add_executable(${PROJECT_NAME} ${TEST_SOURCES})
+target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/app/menu_system.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE gtest_main game_core)
 
 add_custom_target(run_${PROJECT_NAME}

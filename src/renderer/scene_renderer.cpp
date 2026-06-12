@@ -20,7 +20,9 @@ QPixmap SceneRenderer::renderFrame(
     const PlayerPresentation& playerPresentation,
     const MenuView& menuView,
     int tileSizePx,
-    int playerScale) const
+    int playerScale,
+    bool editorMode,
+    GameLanguage language) const
 {
   const int stageWidthPx = static_cast<int>(engine.stageWidthCells()) * tileSizePx;
   const int stageHeightPx = static_cast<int>(engine.stageHeightCells()) * tileSizePx;
@@ -46,9 +48,19 @@ QPixmap SceneRenderer::renderFrame(
   const int cameraOffsetXPx = static_cast<int>(std::lround(cameraX));
 
   tileMapper.render(painter, tileSizePx, cameraOffsetXPx);
+  if (editorMode)
+  {
+    tileMapper.renderEditorMarkers(painter, tileSizePx, cameraOffsetXPx);
+  }
+  drawWorldItems(painter, engine, assets, cameraOffsetXPx, tileSizePx);
   drawPlayer(painter, engine, playerPresentation, assets, cameraOffsetXPx, tileSizePx, playerScale);
   drawDoubleJumpFx(painter, engine, cameraOffsetXPx, tileSizePx, playerScale);
   drawEnemies(painter, engine, assets, cameraOffsetXPx, tileSizePx);
+  drawHud(painter, engine, assets, targetSize, language);
+  if (editorMode)
+  {
+    drawEditorOverlay(painter, targetSize, tileSizePx, language);
+  }
   drawMenuOverlay(painter, targetSize, menuView);
 
   return composed;
@@ -190,6 +202,129 @@ void SceneRenderer::drawEnemies(
     drawLifeBarAboveEnemy(painter, *enemy, tileSizePx);
     painter.restore();
   }
+}
+
+void SceneRenderer::drawWorldItems(
+    QPainter& painter,
+    const Engine& engine,
+    const AssetRepository& assets,
+    int cameraOffsetXPx,
+    int tileSizePx) const
+{
+  painter.save();
+  painter.setRenderHint(QPainter::Antialiasing, false);
+
+  for (const Position& coin : engine.coins())
+  {
+    const int centerX = static_cast<int>(coin.x()) * tileSizePx - cameraOffsetXPx + tileSizePx / 2;
+    const int centerY = static_cast<int>(coin.y()) * tileSizePx + tileSizePx / 2;
+    const QRect coinRect(centerX - 10, centerY - 10, 20, 20);
+    painter.drawPixmap(coinRect, assets.coinIcon());
+  }
+
+  if (engine.levelExit())
+  {
+    const Position exit = *engine.levelExit();
+    const int x = static_cast<int>(exit.x()) * tileSizePx - cameraOffsetXPx;
+    const int y = static_cast<int>(exit.y()) * tileSizePx;
+    const QRect portalRect(x + 3, y - tileSizePx, tileSizePx - 6, tileSizePx * 2);
+    painter.setPen(QPen(engine.coins().empty() ? QColor(120, 245, 255) : QColor(120, 120, 130), 3));
+    painter.setBrush(engine.coins().empty() ? QColor(35, 160, 210, 120) : QColor(30, 30, 40, 150));
+    painter.drawRoundedRect(portalRect, 8, 8);
+  }
+
+  painter.restore();
+}
+
+void SceneRenderer::drawHud(
+    QPainter& painter,
+    const Engine& engine,
+    const AssetRepository& assets,
+    const QSize& targetSize,
+    GameLanguage language) const
+{
+  painter.save();
+  painter.setRenderHint(QPainter::Antialiasing, true);
+
+  const QRect panel(14, 12, 260, 62);
+  painter.setPen(QPen(QColor(225, 225, 225, 180), 1));
+  painter.setBrush(QColor(8, 12, 20, 190));
+  painter.drawRoundedRect(panel, 8, 8);
+
+  for (int index = 0; index < engine.playerMaxHealth(); ++index)
+  {
+    const int x = 28 + index * 25;
+    const int y = 27;
+    if (index < engine.playerHealth())
+    {
+      painter.drawPixmap(QRect(x, y, 20, 20), assets.heartIcon());
+    }
+    else
+    {
+      painter.setOpacity(0.25);
+      painter.drawPixmap(QRect(x, y, 20, 20), assets.heartIcon());
+      painter.setOpacity(1.0);
+    }
+  }
+
+  QFont hudFont = painter.font();
+  hudFont.setPointSize(11);
+  hudFont.setBold(true);
+  painter.setFont(hudFont);
+  painter.setPen(QColor(255, 224, 95));
+  painter.drawText(QRect(28, 50, 110, 18), Qt::AlignLeft | Qt::AlignVCenter,
+                   QString::fromUtf8(language == GameLanguage::Polish ? "Monety: %1" : "Coins: %1")
+                       .arg(engine.playerCoins()));
+  painter.setPen(Qt::white);
+  painter.drawText(QRect(140, 50, 120, 18), Qt::AlignLeft | Qt::AlignVCenter,
+                   QString::fromUtf8(language == GameLanguage::Polish ? "Wynik: %1" : "Score: %1")
+                       .arg(engine.playerScore()));
+
+  if (!engine.coins().empty())
+  {
+    painter.setPen(QColor(220, 225, 235));
+    painter.drawText(
+        QRect(targetSize.width() - 280, 18, 260, 24),
+        Qt::AlignRight | Qt::AlignVCenter,
+        QString::fromUtf8(
+            language == GameLanguage::Polish
+                ? "Zbierz wszystkie monety, aby otworzyc brame"
+                : "Collect all coins to unlock the gate"));
+  }
+
+  painter.restore();
+}
+
+void SceneRenderer::drawEditorOverlay(
+    QPainter& painter,
+    const QSize& targetSize,
+    int tileSizePx,
+    GameLanguage language) const
+{
+  painter.save();
+  painter.setPen(QPen(QColor(255, 255, 255, 35), 1));
+  for (int x = 0; x <= targetSize.width(); x += tileSizePx)
+  {
+    painter.drawLine(x, 0, x, targetSize.height());
+  }
+  for (int y = 0; y <= targetSize.height(); y += tileSizePx)
+  {
+    painter.drawLine(0, y, targetSize.width(), y);
+  }
+
+  const QRect helpRect(14, targetSize.height() - 62, targetSize.width() - 28, 46);
+  painter.setPen(QPen(QColor(220, 230, 245), 1));
+  painter.setBrush(QColor(8, 12, 20, 210));
+  painter.drawRoundedRect(helpRect, 6, 6);
+  painter.setPen(Qt::white);
+  painter.drawText(
+      helpRect.adjusted(12, 4, -12, -4),
+      Qt::AlignLeft | Qt::AlignVCenter,
+      QString::fromUtf8(
+          language == GameLanguage::Polish
+              ? "EDYTOR  |  Lewy: uzyj narzedzia  |  Prawy: usun  |  1-5: narzedzia  |  Ctrl+S: zapisz"
+              : "EDITOR  |  Left: use tool  |  Right: erase  |  1-5: tools  |  Ctrl+S: save"));
+  painter.restore();
 }
 
 void SceneRenderer::drawDoubleJumpFx(

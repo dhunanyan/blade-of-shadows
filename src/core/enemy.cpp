@@ -1,4 +1,5 @@
 #include "game/core/enemy.h"
+#include <algorithm>
 
 constexpr const float MAX_LIFE = 100.0f;
 
@@ -13,6 +14,14 @@ bool Enemy::shouldIMoveThisTime() const
     auto currentTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastMoveTime_);
     return elapsedTime >= moveInterval_;
+}
+void Enemy::setContactDamage(int value)
+{
+  contactDamage_ = std::max(0, value);
+}
+void Enemy::setMoveCooldownTicks(int value)
+{
+  moveCooldownTicks_ = std::max(0, value);
 }
 void Enemy::decreaseLife(float damage)
 {

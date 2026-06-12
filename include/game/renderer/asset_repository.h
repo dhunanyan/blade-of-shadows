@@ -14,6 +14,8 @@ private:
   QPixmap backgroundLayer2_;
   QPixmap backgroundLayer3_;
   QPixmap enemyTexture_;
+  QPixmap heartIcon_;
+  QPixmap coinIcon_;
 
   std::unordered_map<PlayerAnimationState, std::vector<QPixmap>> playerClips_;
   std::unordered_map<PlayerAnimationState, std::vector<QPixmap>> playerAttackVariantClips_;
@@ -41,6 +43,8 @@ public:
   {
     return enemyTexture_;
   }
+  const QPixmap& heartIcon() const { return heartIcon_; }
+  const QPixmap& coinIcon() const { return coinIcon_; }
   const std::vector<QPixmap>& playerClip(PlayerAnimationState state) const
   {
     const auto it = playerClips_.find(state);

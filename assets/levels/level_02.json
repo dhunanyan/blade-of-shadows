@@ -1,0 +1,184 @@
+{
+  "id": "level_02",
+  "name": "Cavern of Echoes",
+  "displayName": "Cavern of Echoes",
+  "width": 60,
+  "height": 25,
+  "tileSize": 24,
+  "tileset": ":/tiles/tileset.png",
+  "playerStart": {
+    "x": 2,
+    "y": 19
+  },
+  "tileRects": [
+    {
+      "x": 0,
+      "y": 20,
+      "width": 60,
+      "height": 5,
+      "srcX": 18,
+      "srcY": 14,
+      "topSrcX": 18,
+      "topSrcY": 13,
+      "solid": true
+    },
+    {
+      "x": 7,
+      "y": 16,
+      "width": 4,
+      "height": 1,
+      "srcX": 5,
+      "srcY": 7,
+      "solid": true
+    },
+    {
+      "x": 14,
+      "y": 12,
+      "width": 5,
+      "height": 1,
+      "srcX": 9,
+      "srcY": 6,
+      "solid": true
+    },
+    {
+      "x": 23,
+      "y": 16,
+      "width": 4,
+      "height": 1,
+      "srcX": 12,
+      "srcY": 10,
+      "solid": true
+    },
+    {
+      "x": 31,
+      "y": 11,
+      "width": 6,
+      "height": 1,
+      "srcX": 5,
+      "srcY": 9,
+      "solid": true
+    },
+    {
+      "x": 41,
+      "y": 15,
+      "width": 4,
+      "height": 1,
+      "srcX": 15,
+      "srcY": 8,
+      "solid": true
+    },
+    {
+      "x": 49,
+      "y": 12,
+      "width": 5,
+      "height": 1,
+      "srcX": 5,
+      "srcY": 11,
+      "solid": true
+    }
+  ],
+  "tiles": [
+    {
+      "x": 5,
+      "y": 19,
+      "srcX": 10,
+      "srcY": 4,
+      "solid": false
+    },
+    {
+      "x": 12,
+      "y": 19,
+      "srcX": 15,
+      "srcY": 5,
+      "solid": false
+    },
+    {
+      "x": 21,
+      "y": 19,
+      "srcX": 12,
+      "srcY": 0,
+      "solid": false
+    },
+    {
+      "x": 29,
+      "y": 19,
+      "srcX": 10,
+      "srcY": 2,
+      "solid": false
+    },
+    {
+      "x": 39,
+      "y": 19,
+      "srcX": 15,
+      "srcY": 10,
+      "solid": false
+    },
+    {
+      "x": 47,
+      "y": 19,
+      "srcX": 12,
+      "srcY": 6,
+      "solid": false
+    }
+  ],
+  "enemies": [
+    {
+      "x": 10,
+      "y": 19
+    },
+    {
+      "x": 20,
+      "y": 19
+    },
+    {
+      "x": 28,
+      "y": 19
+    },
+    {
+      "x": 39,
+      "y": 19
+    },
+    {
+      "x": 48,
+      "y": 19
+    },
+    {
+      "x": 56,
+      "y": 19
+    }
+  ],
+  "coins": [
+    {
+      "x": 8,
+      "y": 15
+    },
+    {
+      "x": 16,
+      "y": 11
+    },
+    {
+      "x": 25,
+      "y": 15
+    },
+    {
+      "x": 34,
+      "y": 10
+    },
+    {
+      "x": 43,
+      "y": 14
+    },
+    {
+      "x": 51,
+      "y": 11
+    },
+    {
+      "x": 57,
+      "y": 19
+    }
+  ],
+  "exit": {
+    "x": 58,
+    "y": 19
+  }
+}

@@ -16,6 +16,7 @@ struct InputState
   bool jumpPressed = false;
   bool jumpJustPressed = false;
   bool downPressed = false;
+  bool downJustPressed = false;
   bool leftPressed = false;
   bool rightPressed = false;
   bool attackPressed = false;
@@ -32,6 +33,10 @@ struct InputState
       jumpPressed = isPressed;
       break;
     case InputAction::Down:
+      if (isPressed && !isAutoRepeat && !downPressed)
+      {
+        downJustPressed = true;
+      }
       downPressed = isPressed;
       break;
     case InputAction::Left:
@@ -56,12 +61,14 @@ struct InputState
   {
     attackJustPressed = false;
     jumpJustPressed = false;
+    downJustPressed = false;
   }
   void resetAll()
   {
     jumpPressed = false;
     jumpJustPressed = false;
     downPressed = false;
+    downJustPressed = false;
     leftPressed = false;
     rightPressed = false;
     attackPressed = false;

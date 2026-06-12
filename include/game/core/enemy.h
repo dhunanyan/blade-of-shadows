@@ -8,6 +8,8 @@ class Enemy : public Object {
 private:
   float life_;
   float maxLife_;
+  int contactDamage_ = 1;
+  int moveCooldownTicks_ = 0;
   float velocityY_ = 0.0f;
   bool isGrounded_ = false;
   static constexpr std::chrono::milliseconds moveInterval_{500};
@@ -20,6 +22,12 @@ public:
     return (life_ / maxLife_) * 100.0f;
   }
   bool shouldIMoveThisTime() const;
+  float life() const { return life_; }
+  float maxLife() const { return maxLife_; }
+  int contactDamage() const { return contactDamage_; }
+  int moveCooldownTicks() const { return moveCooldownTicks_; }
+  void setContactDamage(int value);
+  void setMoveCooldownTicks(int value);
   bool isAlive() const
   {
     return lifePercent() > 0;
