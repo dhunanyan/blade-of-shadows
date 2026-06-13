@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QUrl>
+#include <QWheelEvent>
 #include "game/core/position.h"
 #include "game/app/qt/mainwindow.h"
 #include "./ui_mainwindow.h"
@@ -73,6 +74,21 @@ MainWindow::MainWindow(QWidget *parent)
         }
         return loaded;
     });
+    gameController_.setLevelSelectionHandlers(
+        [this]()
+        {
+            return session_.levelSelections();
+        },
+        [this](const std::string& levelId)
+        {
+            const bool loaded = session_.loadSelectableLevel(levelId);
+            if (loaded)
+            {
+                playerPresentation_ = PlayerPresentation();
+                sceneRenderer_.resetCamera();
+            }
+            return loaded;
+        });
     gameController_.setSettingsChangedHandler([this](const GameSettings& settings) {
         settingsRepository_.save(settings);
         applySettings(settings);
@@ -122,7 +138,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::redrawView()
 {
-    const QPixmap frame = sceneRenderer_.renderFrame(
+    QPixmap frame = sceneRenderer_.renderFrame(
         gameController_.engine(),
         session_.level(),
         assets_,
@@ -132,6 +148,12 @@ void MainWindow::redrawView()
         playerScale_,
         gameController_.mode() == GameMode::LevelEditor,
         gameController_.settings().language);
+    if (gameController_.mode() == GameMode::LevelEditor &&
+        !gameController_.menuView().visible)
+    {
+        QPainter palettePainter(&frame);
+        editorPalette_.render(palettePainter, frame.size(), session_.level());
+    }
     sourceFrameSize_ = frame.size();
 
     const QSize viewportSize = ui_->background->size();
@@ -161,7 +183,20 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
         if (event->type() == QEvent::MouseMove)
         {
             auto* mouseEvent = static_cast<QMouseEvent*>(event);
-            handleMenuPointer(mouseEvent->position().toPoint(), false);
+            if (gameController_.mode() == GameMode::LevelEditor &&
+                !gameController_.menuView().visible &&
+                (mouseEvent->buttons() & (Qt::LeftButton | Qt::RightButton)))
+            {
+                const Qt::MouseButton button =
+                    mouseEvent->buttons().testFlag(Qt::RightButton)
+                        ? Qt::RightButton
+                        : Qt::LeftButton;
+                handleEditorPointer(mouseEvent->position().toPoint(), button);
+            }
+            else
+            {
+                handleMenuPointer(mouseEvent->position().toPoint(), false);
+            }
         }
         else if (event->type() == QEvent::MouseButtonPress)
         {
@@ -169,11 +204,28 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
             if (gameController_.mode() == GameMode::LevelEditor &&
                 !gameController_.menuView().visible)
             {
+                lastEditedCell_ = QPoint(-1, -1);
                 handleEditorPointer(mouseEvent->position().toPoint(), mouseEvent->button());
             }
             else if (mouseEvent->button() == Qt::LeftButton)
             {
                 handleMenuPointer(mouseEvent->position().toPoint(), true);
+            }
+        }
+        else if (event->type() == QEvent::MouseButtonRelease)
+        {
+            lastEditedCell_ = QPoint(-1, -1);
+        }
+        else if (event->type() == QEvent::Wheel &&
+                 gameController_.menuView().visible)
+        {
+            auto* wheelEvent = static_cast<QWheelEvent*>(event);
+            if (wheelEvent->angleDelta().y() != 0)
+            {
+                gameController_.onMenuScroll(
+                    wheelEvent->angleDelta().y() > 0 ? -1 : 1);
+                wheelEvent->accept();
+                return true;
             }
         }
     }
@@ -189,26 +241,38 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
         event->accept();
         return;
     }
+    if (gameController_.mode() == GameMode::LevelEditor &&
+        !gameController_.menuView().visible)
+    {
+        switch (event->key())
+        {
+        case Qt::Key_Left:
+        case Qt::Key_A:
+            editorCameraLeft_ = true;
+            event->accept();
+            return;
+        case Qt::Key_Right:
+        case Qt::Key_D:
+            editorCameraRight_ = true;
+            event->accept();
+            return;
+        case Qt::Key_Up:
+        case Qt::Key_W:
+            editorCameraUp_ = true;
+            event->accept();
+            return;
+        case Qt::Key_Down:
+        case Qt::Key_S:
+            editorCameraDown_ = true;
+            event->accept();
+            return;
+        default:
+            break;
+        }
+    }
     if (gameController_.mode() == GameMode::LevelEditor && !event->isAutoRepeat())
     {
-        const int tileCount =
-            session_.level().tilesetColumns() * session_.level().tilesetRows();
-        if ((event->key() == Qt::Key_Q || event->key() == Qt::Key_E) && tileCount > 0)
-        {
-            const int delta = event->key() == Qt::Key_Q ? -1 : 1;
-            editorTileIndex_ = (editorTileIndex_ + delta + tileCount) % tileCount;
-            updateEditorStatus();
-            event->accept();
-            return;
-        }
-        if (event->key() == Qt::Key_F)
-        {
-            editorSolid_ = !editorSolid_;
-            updateEditorStatus();
-            event->accept();
-            return;
-        }
-        if (event->key() >= Qt::Key_1 && event->key() <= Qt::Key_5)
+        if (event->key() >= Qt::Key_1 && event->key() <= Qt::Key_6)
         {
             editorTool_ = static_cast<EditorTool>(event->key() - Qt::Key_1);
             updateEditorStatus();
@@ -222,6 +286,27 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event)
 {
+    switch (event->key())
+    {
+    case Qt::Key_Left:
+    case Qt::Key_A:
+        editorCameraLeft_ = false;
+        break;
+    case Qt::Key_Right:
+    case Qt::Key_D:
+        editorCameraRight_ = false;
+        break;
+    case Qt::Key_Up:
+    case Qt::Key_W:
+        editorCameraUp_ = false;
+        break;
+    case Qt::Key_Down:
+    case Qt::Key_S:
+        editorCameraDown_ = false;
+        break;
+    default:
+        break;
+    }
     gameController_.onKeyEvent(event->key(), false, event->isAutoRepeat());
     QMainWindow::keyReleaseEvent(event);
 }
@@ -234,6 +319,17 @@ void MainWindow::mouseMoveEvent(QMouseEvent* event)
 void MainWindow::mousePressEvent(QMouseEvent* event)
 {
     QMainWindow::mousePressEvent(event);
+}
+
+void MainWindow::wheelEvent(QWheelEvent* event)
+{
+    if (gameController_.menuView().visible && event->angleDelta().y() != 0)
+    {
+        gameController_.onMenuScroll(event->angleDelta().y() > 0 ? -1 : 1);
+        event->accept();
+        return;
+    }
+    QMainWindow::wheelEvent(event);
 }
 
 void MainWindow::handleMenuPointer(const QPoint& localPoint, bool activate)
@@ -295,9 +391,35 @@ void MainWindow::handleEditorPointer(const QPoint& localPoint, Qt::MouseButton b
         return;
     }
 
+    if (editorPalette_.contains(framePoint, sourceFrameSize_))
+    {
+        if (button == Qt::LeftButton)
+        {
+            editorPalette_.handleClick(
+                framePoint,
+                sourceFrameSize_,
+                session_.level());
+            editorTool_ =
+                editorPalette_.mode() == EditorPalette::Mode::Terrain
+                    ? EditorTool::Tile
+                    : EditorTool::Decoration;
+        }
+        lastEditedCell_ = QPoint(-1, -1);
+        updateEditorStatus();
+        return;
+    }
+
     const int worldX = framePoint.x() + static_cast<int>(std::lround(sceneRenderer_.cameraOffsetX()));
     const int gridX = worldX / session_.level().tileSizePx();
-    const int gridY = framePoint.y() / session_.level().tileSizePx();
+    const int worldY = framePoint.y() + static_cast<int>(std::lround(sceneRenderer_.cameraOffsetY()));
+    const int gridY = worldY / session_.level().tileSizePx();
+    const QPoint editedCell(gridX, gridY);
+    if (editedCell == lastEditedCell_)
+    {
+        return;
+    }
+    lastEditedCell_ = editedCell;
+
     if (button == Qt::RightButton)
     {
         session_.level().removeTile(gridX, gridY);
@@ -308,16 +430,19 @@ void MainWindow::handleEditorPointer(const QPoint& localPoint, Qt::MouseButton b
         switch (editorTool_)
         {
         case EditorTool::Tile:
-        {
-            const int columns = std::max(1, session_.level().tilesetColumns());
             session_.level().paintTile(
                 gridX,
                 gridY,
-                editorTileIndex_ % columns,
-                editorTileIndex_ / columns,
-                editorSolid_);
+                editorPalette_.tileX(),
+                editorPalette_.tileY(),
+                true);
             break;
-        }
+        case EditorTool::Decoration:
+            session_.level().placeDecoration(
+                editorPalette_.decorationId(),
+                gridX,
+                gridY);
+            break;
         case EditorTool::PlayerSpawn:
             session_.level().setPlayerStart(gridX, gridY);
             break;
@@ -368,23 +493,33 @@ bool MainWindow::saveCustomLevel()
 
 void MainWindow::updateEditorStatus()
 {
-    const int columns = std::max(1, session_.level().tilesetColumns());
     const QString toolNames[] = {
         QString::fromUtf8("Tile"),
+        QString::fromUtf8("Decoration"),
         QString::fromUtf8("Player Spawn"),
         QString::fromUtf8("Enemy"),
         QString::fromUtf8("Coin"),
         QString::fromUtf8("Exit")};
     ui_->statusbar->showMessage(
-        QString::fromUtf8("Tool: %1 | Tile (%2, %3) | %4 | 1-5 tools | Q/E tile | F collision | Ctrl+S save")
+        QString::fromUtf8("Tool: %1 | %2 | Drag left: paint | Drag right: erase | WASD/arrows: camera | 1-6 tools | Ctrl+S save")
             .arg(toolNames[static_cast<int>(editorTool_)])
-            .arg(editorTileIndex_ % columns)
-            .arg(editorTileIndex_ / columns)
-            .arg(editorSolid_ ? QString::fromUtf8("Solid") : QString::fromUtf8("Decorative")));
+            .arg(editorPalette_.selectionLabel()));
 }
 
 void MainWindow::update()
 {
+    if (gameController_.mode() == GameMode::LevelEditor &&
+        !gameController_.menuView().visible)
+    {
+        constexpr float editorCameraSpeed = 8.0f;
+        const float deltaX =
+            static_cast<float>(editorCameraRight_ - editorCameraLeft_) *
+            editorCameraSpeed;
+        const float deltaY =
+            static_cast<float>(editorCameraDown_ - editorCameraUp_) *
+            editorCameraSpeed;
+        sceneRenderer_.panEditorCamera(deltaX, deltaY);
+    }
     gameController_.tick();
 
     for (const GameEvent event : gameController_.engine().takeEvents())
@@ -410,6 +545,7 @@ void MainWindow::update()
             deathSound_.play();
             break;
         case GameEvent::LevelCompleted:
+            session_.recordCurrentLevelCompleted();
             levelCompleteSound_.play();
             break;
         }

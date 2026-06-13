@@ -83,6 +83,14 @@ void GameController::onMenuClick(int clickedIndex)
   menuSystem_.activateAt(clickedIndex);
 }
 
+void GameController::onMenuScroll(int delta)
+{
+  if (mode_ == GameMode::Menu && delta != 0)
+  {
+    menuSystem_.moveSelection(delta);
+  }
+}
+
 void GameController::applyInput()
 {
   engine_.setPlayerMoveIntentX(input_.moveIntentX());
@@ -140,6 +148,7 @@ void GameController::buildMenus()
       {
           MenuItem{text("New Game", "Nowa gra"), [this]() { startGame(true); }},
           MenuItem{text("Load Game", "Wczytaj gre"), [this]() { loadGame(); }},
+          MenuItem{text("Select Level", "Wybierz poziom"), [this]() { openLevelSelection(); }},
           MenuItem{text("Level Editor", "Edytor poziomow"), [this]() { startLevelEditor(); }},
           MenuItem{text("Settings", "Ustawienia"), [this]() { menuSystem_.pushMenu("options"); }},
           MenuItem{text("Credits", "Autorzy"), [this]() { menuSystem_.pushMenu("credits"); }},
@@ -318,6 +327,50 @@ void GameController::startLevelEditor()
     return;
   }
   mode_ = GameMode::LevelEditor;
+  menuSystem_.close();
+  input_.resetAll();
+}
+
+void GameController::openLevelSelection()
+{
+  std::vector<MenuItem> items;
+  if (levelCatalogHandler_)
+  {
+    for (const LevelSelectionEntry& level : levelCatalogHandler_())
+    {
+      const std::string label = level.unlocked ? level.label : "???";
+      items.push_back(MenuItem{
+          label,
+          level.unlocked
+              ? std::function<void()>(
+                    [this, levelId = level.id]()
+                    {
+                      loadSelectedLevel(levelId);
+                    })
+              : std::function<void()>()});
+    }
+  }
+  items.push_back(MenuItem{
+      text("Back", "Wstecz"),
+      [this]()
+      {
+        menuSystem_.popMenu();
+      }});
+
+  menuSystem_.registerMenu(MenuDefinition{
+      "level_select",
+      text("Select Level", "Wybierz poziom"),
+      std::move(items)});
+  menuSystem_.pushMenu("level_select");
+}
+
+void GameController::loadSelectedLevel(const std::string& levelId)
+{
+  if (!loadSelectedLevelHandler_ || !loadSelectedLevelHandler_(levelId))
+  {
+    return;
+  }
+  mode_ = GameMode::Playing;
   menuSystem_.close();
   input_.resetAll();
 }

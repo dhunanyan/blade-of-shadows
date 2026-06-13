@@ -25,6 +25,8 @@ struct MenuView
   std::string title;
   std::vector<std::string> items;
   int selectedIndex = 0;
+  int firstVisibleIndex = 0;
+  int totalItemCount = 0;
 };
 
 class MenuSystem
@@ -50,7 +52,7 @@ public:
     return stack_.size() <= 1;
   }
   const std::string& currentMenuId() const;
-  MenuView view() const;
+  MenuView view(int maxVisibleItems = 8) const;
 
 private:
   const MenuDefinition* currentMenu() const;

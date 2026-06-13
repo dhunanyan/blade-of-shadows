@@ -33,6 +33,23 @@ The generated placeholder sound effects can be recreated with:
 
 Final enemy, heart, and coin files can replace the current PNGs while keeping the aliases in `assets/qt/resources.qrc`.
 
+## Campaign Generation
+
+The 20 campaign JSON files and the editor's terrain catalog are deterministic
+generated assets:
+
+```bash
+node scripts/generate_campaign_levels.mjs
+```
+
+The generator reads every classified tile from
+`assets/images/tiles/groups`, uses the complete terrain catalog in every level,
+adds every decoration type, and rejects entity/terrain overlap or unsupported
+spawn and exit cells before writing files.
+
+Terrain entries generated for a level are always solid. Non-solid visual detail
+is represented only through the separate `decorations` array.
+
 ## Packaging
 
 ```bash

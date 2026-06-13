@@ -54,6 +54,10 @@ Compact rectangles:
 {
   "enemies": [{ "x": 14, "y": 19 }],
   "coins": [{ "x": 7, "y": 19 }],
+  "decorations": [
+    { "type": "grass_1", "x": 9, "y": 19 },
+    { "type": "lamp", "x": 18, "y": 19 }
+  ],
   "exit": { "x": 58, "y": 19 }
 }
 ```
@@ -69,6 +73,18 @@ Enemy, coin, and exit cells must not overlap solid tiles. The editor prevents
 placing entities inside collision cells and removes entities when a solid tile
 is painted over their cell.
 
+Terrain tiles are collision-bearing world geometry. Decorative, non-solid
+visuals use the `decorations` collection instead of terrain entries with
+`"solid": false`.
+
 ## Custom Levels
 
-The editor serializes custom levels as individual tiles. It preserves player spawn, enemies, coins, exit, collision flags, and source tileset coordinates.
+The editor serializes custom levels as individual `.json` files. It preserves
+player spawn, enemies, coins, exit, collision flags, and source tileset
+coordinates. New levels use sequential filenames such as
+`custom_level_001.json`; saving an already loaded custom level updates its
+existing file.
+
+Custom levels live in the platform-specific
+`Dhunanyan/Blade of Shadows/levels` application data directory and are always
+shown in the level-selection menu.

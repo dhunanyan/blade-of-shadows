@@ -23,6 +23,20 @@ public:
         QPixmap pixmap;
     };
 
+    struct DecorationAsset
+    {
+        QString id;
+        QString label;
+        QPixmap pixmap;
+    };
+
+    struct Decoration
+    {
+        QString id;
+        int x = 0;
+        int y = 0;
+    };
+
     bool loadFromJsonResource(const QString& levelResourcePath);
     bool loadFromJsonFile(const QString& levelFilePath);
     bool saveToJsonFile(const QString& levelFilePath) const;
@@ -32,6 +46,12 @@ public:
     bool toggleEnemySpawn(int gridX, int gridY);
     bool toggleCoinSpawn(int gridX, int gridY);
     bool setLevelExit(int gridX, int gridY);
+    bool placeDecoration(const QString& decorationId, int gridX, int gridY);
+    void setLevelIdentity(const QString& levelId, const QString& levelName)
+    {
+        levelId_ = levelId;
+        levelName_ = levelName;
+    }
     void removeEntitiesAt(int gridX, int gridY);
     void render(QPainter& painter, int tileSizePx, int cameraOffsetXPx = 0) const;
     void renderEditorMarkers(QPainter& painter, int tileSizePx, int cameraOffsetXPx = 0) const;
@@ -52,8 +72,12 @@ public:
     const std::optional<Position>& levelExit() const { return levelExit_; }
     const QString& levelId() const { return levelId_; }
     const QString& levelName() const { return levelName_; }
+    const QPixmap& tilesetPixmap() const { return tileset_; }
+    const std::vector<DecorationAsset>& decorationCatalog() const { return decorationCatalog_; }
+    const std::vector<Decoration>& decorations() const { return decorations_; }
     bool isLoaded() const { return loaded_; }
     bool isSolidAt(int gridX, int gridY) const;
+    bool tileHasVisiblePixels(int srcX, int srcY) const;
 
 private:
     bool loadFromDevice(class QIODevice& device);
@@ -66,6 +90,8 @@ private:
         int srcX,
         int srcY,
         bool solid);
+    const DecorationAsset* decorationAsset(const QString& id) const;
+    void loadDecorationCatalog();
 
     bool loaded_ = false;
     int levelWidth_ = 0;
@@ -80,6 +106,9 @@ private:
     std::vector<Tile> tiles_;
     std::vector<std::vector<bool>> solidGrid_;
     QPixmap tileset_;
+    std::vector<DecorationAsset> decorationCatalog_;
+    std::vector<Decoration> decorations_;
+    std::vector<Position> terrainCatalog_;
     std::vector<Position> enemySpawns_;
     std::vector<Position> coinSpawns_;
     std::optional<Position> levelExit_;

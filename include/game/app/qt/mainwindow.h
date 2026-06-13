@@ -7,6 +7,7 @@
 #include <QTimer>
 #include "game/app/game_controller.h"
 #include "game/app/qt/game_session.h"
+#include "game/app/qt/editor_palette.h"
 #include "game/app/qt/music_player.h"
 #include "game/app/qt/settings_repository.h"
 #include "game/renderer/asset_repository.h"
@@ -33,12 +34,14 @@ public slots:
     void keyReleaseEvent(QKeyEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
     void update();
 
 private:
     enum class EditorTool
     {
         Tile,
+        Decoration,
         PlayerSpawn,
         Enemy,
         Coin,
@@ -71,9 +74,13 @@ private:
     SettingsRepository settingsRepository_;
     QRect displayedFrameRect_;
     QSize sourceFrameSize_;
-    int editorTileIndex_ = 0;
-    bool editorSolid_ = true;
     EditorTool editorTool_ = EditorTool::Tile;
+    EditorPalette editorPalette_;
+    QPoint lastEditedCell_{-1, -1};
+    bool editorCameraLeft_ = false;
+    bool editorCameraRight_ = false;
+    bool editorCameraUp_ = false;
+    bool editorCameraDown_ = false;
 
     static constexpr int playerScale_ = 3;
 };

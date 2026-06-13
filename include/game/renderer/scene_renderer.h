@@ -28,11 +28,21 @@ public:
       bool editorMode = false,
       GameLanguage language = GameLanguage::English) const;
   int menuItemAtPoint(const MenuView& menuView, const QSize& targetSize, const QPoint& point) const;
-  float cameraOffsetX() const { return cameraX_; }
+  float cameraOffsetX() const { return lastCameraX_; }
+  float cameraOffsetY() const { return lastCameraY_; }
+  void panEditorCamera(float deltaX, float deltaY)
+  {
+    editorCameraX_ += deltaX;
+    editorCameraY_ += deltaY;
+  }
   void resetCamera()
   {
     cameraX_ = 0.0f;
     cameraInitialized_ = false;
+    editorCameraX_ = 0.0f;
+    editorCameraY_ = 0.0f;
+    lastCameraX_ = 0.0f;
+    lastCameraY_ = 0.0f;
   }
 
 private:
@@ -74,14 +84,21 @@ private:
       QPainter& painter,
       const QSize& targetSize,
       int tileSizePx,
+      int cameraOffsetXPx,
+      int cameraOffsetYPx,
       GameLanguage language) const;
   void drawLifeBarAboveEnemy(QPainter& painter, const Enemy& enemy, int tileSizePx) const;
   void drawMenuOverlay(QPainter& painter, const QSize& targetSize, const MenuView& menuView) const;
 
 private:
   static constexpr int viewportWidthCells_ = 48;
+  static constexpr int viewportHeightCells_ = 25;
   mutable float cameraX_ = 0.0f;
   mutable bool cameraInitialized_ = false;
+  mutable float editorCameraX_ = 0.0f;
+  mutable float editorCameraY_ = 0.0f;
+  mutable float lastCameraX_ = 0.0f;
+  mutable float lastCameraY_ = 0.0f;
 };
 
 #endif // GAME_RENDERER_SCENE_RENDERER_H

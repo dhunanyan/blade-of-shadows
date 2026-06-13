@@ -113,7 +113,7 @@ const std::string& MenuSystem::currentMenuId() const
   return stack_.back();
 }
 
-MenuView MenuSystem::view() const
+MenuView MenuSystem::view(int maxVisibleItems) const
 {
   MenuView out{};
   const MenuDefinition* menu = currentMenu();
@@ -125,10 +125,29 @@ MenuView MenuSystem::view() const
   out.visible = true;
   out.title = menu->title;
   out.selectedIndex = selectedIndexForCurrentMenu();
-  out.items.reserve(menu->items.size());
-  for (const auto& item : menu->items)
+  out.totalItemCount = static_cast<int>(menu->items.size());
+
+  const int visibleCount = std::clamp(
+      maxVisibleItems,
+      1,
+      std::max(1, out.totalItemCount));
+  const int maxFirst = std::max(0, out.totalItemCount - visibleCount);
+  out.firstVisibleIndex = std::clamp(
+      out.selectedIndex - visibleCount + 1,
+      0,
+      maxFirst);
+  if (out.selectedIndex < out.firstVisibleIndex)
   {
-    out.items.push_back(item.label);
+    out.firstVisibleIndex = out.selectedIndex;
+  }
+
+  const int end = std::min(
+      out.totalItemCount,
+      out.firstVisibleIndex + visibleCount);
+  out.items.reserve(static_cast<std::size_t>(end - out.firstVisibleIndex));
+  for (int index = out.firstVisibleIndex; index < end; ++index)
+  {
+    out.items.push_back(menu->items[static_cast<std::size_t>(index)].label);
   }
 
   return out;

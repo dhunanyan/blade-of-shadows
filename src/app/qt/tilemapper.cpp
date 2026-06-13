@@ -33,6 +33,7 @@ bool TileMapper::loadFromDevice(QIODevice& device)
   solidGrid_.clear();
   enemySpawns_.clear();
   coinSpawns_.clear();
+  decorations_.clear();
   levelExit_.reset();
   loaded_ = false;
   maxOccupiedColumn_ = 0;
@@ -73,6 +74,7 @@ bool TileMapper::loadFromDevice(QIODevice& device)
 
   tileset_.load(tilesetPath);
   if (tileset_.isNull()) return false;
+  loadDecorationCatalog();
 
   const int tilesetCols = tileset_.width() / tileSizePx_;
   const int tilesetRows = tileset_.height() / tileSizePx_;
@@ -140,6 +142,19 @@ bool TileMapper::loadFromDevice(QIODevice& device)
   };
   parsePositions("enemies", enemySpawns_);
   parsePositions("coins", coinSpawns_);
+
+  for (const QJsonValue& value : root.value("decorations").toArray())
+  {
+    const QJsonObject object = value.toObject();
+    const QString type = object.value("type").toString();
+    const int x = object.value("x").toInt(-1);
+    const int y = object.value("y").toInt(-1);
+    if (decorationAsset(type) != nullptr &&
+        x >= 0 && y >= 0 && x < levelWidth_ && y < levelHeight_)
+    {
+      decorations_.push_back(Decoration{type, x, y});
+    }
+  }
 
   const QJsonObject exitObject = root.value("exit").toObject();
   const int exitX = exitObject.value("x").toInt(-1);
@@ -320,6 +335,31 @@ bool TileMapper::setLevelExit(int gridX, int gridY)
   return true;
 }
 
+bool TileMapper::placeDecoration(
+    const QString& decorationId,
+    int gridX,
+    int gridY)
+{
+  if (!loaded_ ||
+      gridX < 0 || gridY < 0 ||
+      gridX >= levelWidth_ || gridY >= levelHeight_ ||
+      decorationAsset(decorationId) == nullptr)
+  {
+    return false;
+  }
+  decorations_.erase(
+      std::remove_if(
+          decorations_.begin(),
+          decorations_.end(),
+          [&](const Decoration& decoration)
+          {
+            return decoration.x == gridX && decoration.y == gridY;
+          }),
+      decorations_.end());
+  decorations_.push_back(Decoration{decorationId, gridX, gridY});
+  return true;
+}
+
 void TileMapper::removeEntitiesAt(int gridX, int gridY)
 {
   const Position target(gridX, gridY);
@@ -333,6 +373,15 @@ void TileMapper::removeEntitiesAt(int gridX, int gridY)
   {
     levelExit_.reset();
   }
+  decorations_.erase(
+      std::remove_if(
+          decorations_.begin(),
+          decorations_.end(),
+          [&](const Decoration& decoration)
+          {
+            return decoration.x == gridX && decoration.y == gridY;
+          }),
+      decorations_.end());
 }
 
 bool TileMapper::saveToJsonFile(const QString& levelFilePath) const
@@ -366,9 +415,9 @@ bool TileMapper::saveToJsonFile(const QString& levelFilePath) const
   };
 
   QJsonObject root{
-      {QString::fromUtf8("id"), QString::fromUtf8("custom_level")},
-      {QString::fromUtf8("name"), QString::fromUtf8("Custom Level")},
-      {QString::fromUtf8("displayName"), QString::fromUtf8("Custom Level")},
+      {QString::fromUtf8("id"), levelId_},
+      {QString::fromUtf8("name"), levelName_},
+      {QString::fromUtf8("displayName"), levelName_},
       {QString::fromUtf8("width"), levelWidth_},
       {QString::fromUtf8("height"), levelHeight_},
       {QString::fromUtf8("tileSize"), tileSizePx_},
@@ -379,6 +428,16 @@ bool TileMapper::saveToJsonFile(const QString& levelFilePath) const
       {QString::fromUtf8("tiles"), tileArray},
       {QString::fromUtf8("enemies"), positionsToJson(enemySpawns_)},
       {QString::fromUtf8("coins"), positionsToJson(coinSpawns_)}};
+
+  QJsonArray decorationArray;
+  for (const Decoration& decoration : decorations_)
+  {
+    decorationArray.append(QJsonObject{
+        {QString::fromUtf8("type"), decoration.id},
+        {QString::fromUtf8("x"), decoration.x},
+        {QString::fromUtf8("y"), decoration.y}});
+  }
+  root.insert(QString::fromUtf8("decorations"), decorationArray);
 
   if (levelExit_)
   {
@@ -437,6 +496,14 @@ bool TileMapper::isSolidAt(int gridX, int gridY) const
   return solidGrid_[static_cast<std::size_t>(gridY)][static_cast<std::size_t>(gridX)];
 }
 
+bool TileMapper::tileHasVisiblePixels(int srcX, int srcY) const
+{
+  return std::find(
+             terrainCatalog_.begin(),
+             terrainCatalog_.end(),
+             Position(srcX, srcY)) != terrainCatalog_.end();
+}
+
 void TileMapper::render(QPainter& painter, int tileSizePx, int cameraOffsetXPx) const
 {
   if (!loaded_ || tileSizePx <= 0) return;
@@ -450,6 +517,87 @@ void TileMapper::render(QPainter& painter, int tileSizePx, int cameraOffsetXPx) 
         tileSizePx);
     painter.drawPixmap(targetRect, tile.pixmap);
   }
+
+  for (const Decoration& decoration : decorations_)
+  {
+    const DecorationAsset* asset = decorationAsset(decoration.id);
+    if (asset == nullptr || asset->pixmap.isNull())
+    {
+      continue;
+    }
+    const QSize size = asset->pixmap.size();
+    const int anchorX =
+        decoration.x * tileSizePx - cameraOffsetXPx + tileSizePx / 2;
+    const int anchorY = (decoration.y + 1) * tileSizePx;
+    painter.drawPixmap(
+        anchorX - size.width() / 2,
+        anchorY - size.height(),
+        asset->pixmap);
+  }
+}
+
+const TileMapper::DecorationAsset* TileMapper::decorationAsset(
+    const QString& id) const
+{
+  const auto it = std::find_if(
+      decorationCatalog_.begin(),
+      decorationCatalog_.end(),
+      [&](const DecorationAsset& asset)
+      {
+        return asset.id == id;
+      });
+  return it == decorationCatalog_.end() ? nullptr : &*it;
+}
+
+void TileMapper::loadDecorationCatalog()
+{
+  if (!decorationCatalog_.empty() && !terrainCatalog_.empty())
+  {
+    return;
+  }
+  QFile terrainCatalogFile(QString::fromUtf8(":/tiles/catalog.json"));
+  if (terrainCatalogFile.open(QIODevice::ReadOnly | QIODevice::Text))
+  {
+    const QJsonArray terrain =
+        QJsonDocument::fromJson(terrainCatalogFile.readAll()).array();
+    for (const QJsonValue& value : terrain)
+    {
+      const QJsonObject object = value.toObject();
+      terrainCatalog_.emplace_back(
+          object.value(QString::fromUtf8("srcX")).toInt(),
+          object.value(QString::fromUtf8("srcY")).toInt());
+    }
+  }
+
+  if (!decorationCatalog_.empty())
+  {
+    return;
+  }
+  const auto add = [&](const char* id, const char* label, int frameWidth = 0)
+  {
+    QPixmap pixmap(
+        QString::fromUtf8(":/decorations/%1.png").arg(QString::fromUtf8(id)));
+    if (frameWidth > 0 && pixmap.width() >= frameWidth)
+    {
+      pixmap = pixmap.copy(0, 0, frameWidth, pixmap.height());
+    }
+    decorationCatalog_.push_back(DecorationAsset{
+        QString::fromUtf8(id),
+        QString::fromUtf8(label),
+        std::move(pixmap)});
+  };
+  add("shop", "Shop");
+  add("shop_anim", "Shop Alt", 118);
+  add("fence_1", "Fence A");
+  add("fence_2", "Fence B");
+  add("sign", "Sign");
+  add("rock_1", "Rock A");
+  add("rock_2", "Rock B");
+  add("rock_3", "Rock C");
+  add("grass_1", "Grass A");
+  add("grass_2", "Grass B");
+  add("grass_3", "Grass C");
+  add("lamp", "Lamp");
 }
 
 void TileMapper::renderEditorMarkers(QPainter& painter, int tileSizePx, int cameraOffsetXPx) const

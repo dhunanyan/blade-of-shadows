@@ -60,3 +60,28 @@ TEST(MenuSystemTester, activationMaySafelyReplaceTheCurrentMenu)
   ASSERT_EQ(menus.view().items.size(), 1U);
   EXPECT_EQ(menus.view().items.front(), "Continue");
 }
+
+TEST(MenuSystemTester, longMenusExposeAWindowAroundTheSelection)
+{
+  MenuSystem menus;
+  std::vector<MenuItem> items;
+  for (int index = 0; index < 12; ++index)
+  {
+    items.push_back(MenuItem{"Item " + std::to_string(index), []() {}});
+  }
+  menus.registerMenu(MenuDefinition{"levels", "Levels", std::move(items)});
+
+  ASSERT_TRUE(menus.openRoot("levels"));
+  for (int index = 0; index < 9; ++index)
+  {
+    menus.moveSelection(1);
+  }
+
+  const MenuView view = menus.view(5);
+  EXPECT_EQ(view.selectedIndex, 9);
+  EXPECT_EQ(view.firstVisibleIndex, 5);
+  EXPECT_EQ(view.totalItemCount, 12);
+  ASSERT_EQ(view.items.size(), 5U);
+  EXPECT_EQ(view.items.front(), "Item 5");
+  EXPECT_EQ(view.items.back(), "Item 9");
+}

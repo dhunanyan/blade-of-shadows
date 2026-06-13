@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <vector>
+#include "game/app/level_selection.h"
 #include "game/app/input_state.h"
 #include "game/app/menu_system.h"
 #include "game/app/game_settings.h"
@@ -61,6 +63,13 @@ public:
   void setLevelEditorHandler(std::function<bool()> handler) { levelEditorHandler_ = std::move(handler); }
   void setSaveLevelHandler(std::function<bool()> handler) { saveLevelHandler_ = std::move(handler); }
   void setPlayEditedLevelHandler(std::function<bool()> handler) { playEditedLevelHandler_ = std::move(handler); }
+  void setLevelSelectionHandlers(
+      std::function<std::vector<LevelSelectionEntry>()> catalogHandler,
+      std::function<bool(const std::string&)> loadHandler)
+  {
+    levelCatalogHandler_ = std::move(catalogHandler);
+    loadSelectedLevelHandler_ = std::move(loadHandler);
+  }
   void setSettingsChangedHandler(std::function<void(const GameSettings&)> handler)
   {
     settingsChangedHandler_ = std::move(handler);
@@ -77,6 +86,7 @@ public:
   void onKeyEvent(int key, bool isPressed, bool isAutoRepeat);
   void onMenuHover(int hoveredIndex);
   void onMenuClick(int clickedIndex);
+  void onMenuScroll(int delta);
   void applyInput();
   void tick();
 
@@ -85,6 +95,8 @@ private:
   void startGame(bool newCampaign = false);
   void startNextLevel();
   void startLevelEditor();
+  void openLevelSelection();
+  void loadSelectedLevel(const std::string& levelId);
   void resumeFromPause();
   void saveGame();
   void saveLevel();
@@ -110,6 +122,8 @@ private:
   std::function<bool()> levelEditorHandler_;
   std::function<bool()> saveLevelHandler_;
   std::function<bool()> playEditedLevelHandler_;
+  std::function<std::vector<LevelSelectionEntry>()> levelCatalogHandler_;
+  std::function<bool(const std::string&)> loadSelectedLevelHandler_;
   std::function<void(const GameSettings&)> settingsChangedHandler_;
   std::function<void()> previousMusicHandler_;
   std::function<void()> nextMusicHandler_;

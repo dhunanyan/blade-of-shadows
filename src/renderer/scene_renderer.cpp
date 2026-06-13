@@ -28,9 +28,12 @@ QPixmap SceneRenderer::renderFrame(
   const int stageWidthPx = static_cast<int>(engine.stageWidthCells()) * tileSizePx;
   const int stageHeightPx = static_cast<int>(engine.stageHeightCells()) * tileSizePx;
   const int viewportWidthPx = std::min(stageWidthPx, viewportWidthCells_ * tileSizePx);
+  const int viewportHeightPx = std::min(stageHeightPx, viewportHeightCells_ * tileSizePx);
   const int contentWidthPx = std::max(viewportWidthPx, (tileMapper.maxOccupiedColumn() + 1) * tileSizePx);
   const float maxCameraX = std::max(0.0f, static_cast<float>(contentWidthPx - viewportWidthPx));
-  const QSize targetSize(viewportWidthPx, stageHeightPx);
+  const float maxCameraY =
+      std::max(0.0f, static_cast<float>(stageHeightPx - viewportHeightPx));
+  const QSize targetSize(viewportWidthPx, viewportHeightPx);
 
   QPixmap composed = assets.backgroundLayer1().scaled(
       targetSize,
@@ -45,22 +48,51 @@ QPixmap SceneRenderer::renderFrame(
     painter.drawRect(composed.rect());
   }
 
-  const float cameraX = updateCameraX(engine, targetSize, maxCameraX);
+  const float cameraX = editorMode
+                            ? std::clamp(editorCameraX_, 0.0f, maxCameraX)
+                            : updateCameraX(engine, targetSize, maxCameraX);
+  const float cameraY = editorMode
+                            ? std::clamp(editorCameraY_, 0.0f, maxCameraY)
+                            : 0.0f;
+  if (editorMode)
+  {
+    editorCameraX_ = cameraX;
+    editorCameraY_ = cameraY;
+  }
+  lastCameraX_ = cameraX;
+  lastCameraY_ = cameraY;
   const int cameraOffsetXPx = static_cast<int>(std::lround(cameraX));
+  const int cameraOffsetYPx = static_cast<int>(std::lround(cameraY));
 
+  painter.save();
+  painter.translate(0, -cameraOffsetYPx);
   tileMapper.render(painter, tileSizePx, cameraOffsetXPx);
   if (editorMode)
   {
     tileMapper.renderEditorMarkers(painter, tileSizePx, cameraOffsetXPx);
   }
-  drawWorldItems(painter, engine, assets, cameraOffsetXPx, tileSizePx);
-  drawPlayer(painter, engine, playerPresentation, assets, cameraOffsetXPx, tileSizePx, playerScale);
-  drawDoubleJumpFx(painter, engine, cameraOffsetXPx, tileSizePx, playerScale);
-  drawEnemies(painter, engine, assets, cameraOffsetXPx, tileSizePx);
-  drawHud(painter, engine, assets, targetSize, language);
+  if (!editorMode)
+  {
+    drawWorldItems(painter, engine, assets, cameraOffsetXPx, tileSizePx);
+    drawPlayer(painter, engine, playerPresentation, assets, cameraOffsetXPx, tileSizePx, playerScale);
+    drawDoubleJumpFx(painter, engine, cameraOffsetXPx, tileSizePx, playerScale);
+    drawEnemies(painter, engine, assets, cameraOffsetXPx, tileSizePx);
+  }
+  painter.restore();
+
+  if (!editorMode)
+  {
+    drawHud(painter, engine, assets, targetSize, language);
+  }
   if (editorMode)
   {
-    drawEditorOverlay(painter, targetSize, tileSizePx, language);
+    drawEditorOverlay(
+        painter,
+        targetSize,
+        tileSizePx,
+        cameraOffsetXPx,
+        cameraOffsetYPx,
+        language);
   }
   drawMenuOverlay(painter, targetSize, menuView);
 
@@ -134,7 +166,7 @@ int SceneRenderer::menuItemAtPoint(const MenuView& menuView, const QSize& target
     const QRect itemRect(panelX + 24, itemStartY + index * itemStep, panelWidth - 48, 30);
     if (itemRect.adjusted(-8, -2, 8, 2).contains(point))
     {
-      return index;
+      return menuView.firstVisibleIndex + index;
     }
   }
 
@@ -312,15 +344,19 @@ void SceneRenderer::drawEditorOverlay(
     QPainter& painter,
     const QSize& targetSize,
     int tileSizePx,
+    int cameraOffsetXPx,
+    int cameraOffsetYPx,
     GameLanguage language) const
 {
   painter.save();
   painter.setPen(QPen(QColor(255, 255, 255, 35), 1));
-  for (int x = 0; x <= targetSize.width(); x += tileSizePx)
+  const int gridStartX = -(cameraOffsetXPx % tileSizePx);
+  const int gridStartY = -(cameraOffsetYPx % tileSizePx);
+  for (int x = gridStartX; x <= targetSize.width(); x += tileSizePx)
   {
     painter.drawLine(x, 0, x, targetSize.height());
   }
-  for (int y = 0; y <= targetSize.height(); y += tileSizePx)
+  for (int y = gridStartY; y <= targetSize.height(); y += tileSizePx)
   {
     painter.drawLine(0, y, targetSize.width(), y);
   }
@@ -335,8 +371,8 @@ void SceneRenderer::drawEditorOverlay(
       Qt::AlignLeft | Qt::AlignVCenter,
       QString::fromUtf8(
           language == GameLanguage::Polish
-              ? "EDYTOR  |  Lewy: uzyj narzedzia  |  Prawy: usun  |  1-5: narzedzia  |  Ctrl+S: zapisz"
-              : "EDITOR  |  Left: use tool  |  Right: erase  |  1-5: tools  |  Ctrl+S: save"));
+              ? "EDYTOR  |  WASD/strzalki: kamera  |  Przeciagnij lewy: rysuj  |  Prawy: usun"
+              : "EDITOR  |  WASD/arrows: camera  |  Drag left: paint  |  Drag right: erase"));
   painter.restore();
 }
 
@@ -450,7 +486,8 @@ void SceneRenderer::drawMenuOverlay(QPainter& painter, const QSize& targetSize, 
   for (int index = 0; index < static_cast<int>(menuView.items.size()); ++index)
   {
     const QRect itemRect(panelX + 24, itemStartY + index * itemStep, panelWidth - 48, 30);
-    if (index == menuView.selectedIndex)
+    const int absoluteIndex = menuView.firstVisibleIndex + index;
+    if (absoluteIndex == menuView.selectedIndex)
     {
       painter.setPen(Qt::NoPen);
       painter.setBrush(QColor(90, 90, 90, 190));
@@ -467,6 +504,24 @@ void SceneRenderer::drawMenuOverlay(QPainter& painter, const QSize& targetSize, 
         Qt::ElideRight,
         itemRect.width());
     painter.drawText(itemRect, Qt::AlignVCenter | Qt::AlignLeft, label);
+  }
+
+  if (menuView.firstVisibleIndex > 0)
+  {
+    painter.setPen(QColor(200, 200, 200));
+    painter.drawText(
+        QRect(panelX, panelY + 55, panelWidth, 20),
+        Qt::AlignCenter,
+        QString::fromUtf8("▲"));
+  }
+  if (menuView.firstVisibleIndex + static_cast<int>(menuView.items.size()) <
+      menuView.totalItemCount)
+  {
+    painter.setPen(QColor(200, 200, 200));
+    painter.drawText(
+        QRect(panelX, panelY + panelHeight - 24, panelWidth, 20),
+        Qt::AlignCenter,
+        QString::fromUtf8("▼"));
   }
 
   painter.restore();

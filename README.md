@@ -4,11 +4,12 @@ Blade of Shadows is a 2D action platformer built with C++23 and Qt 6. It combine
 
 ## Features
 
-- Two playable campaign levels with camera scrolling and solid-tile collision.
+- Twenty long campaign levels with camera scrolling and solid-tile collision.
 - Idle, run, jump, fall, dodge, damage, death, and attack animation support.
 - Melee combat, enemy health, contact damage, player hearts, score, and coins.
 - Variable-height jump, double jump, apex handling, ceiling collision, and dodge invulnerability.
 - Main, pause, game-over, victory, campaign-complete, settings, credits, and editor menus.
+- Persistent campaign unlocks and a scrollable campaign/custom-level selector.
 - Mouse and keyboard menu navigation.
 - Persistent save game and settings storage through Qt application data paths.
 - English and Polish UI text.
@@ -64,14 +65,18 @@ Open **Level Editor** from the main menu.
 | Action | Input |
 | --- | --- |
 | Paint selected object | Left click |
-| Remove tile and entities | Right click |
-| Select tile/spawn/enemy/coin/exit tool | `1`-`5` |
-| Previous/next tileset tile | `Q` / `E` |
-| Toggle solid/decorative tile | `F` |
+| Paint continuously | Hold left click and drag |
+| Erase continuously | Hold right click and drag |
+| Select terrain or decoration | Click the editor palette |
+| Select tile/decoration/spawn/enemy/coin/exit tool | `1`-`6` |
+| Move editor camera | Arrow keys or `W`/`A`/`S`/`D` |
 | Save custom level | `Ctrl+S` |
 | Editor menu | `Esc` |
 
-Custom levels and save games are stored under the platform-specific Qt application data directory for `Dhunanyan/Blade of Shadows`.
+Custom levels are saved as individual JSON files under the platform-specific
+`Dhunanyan/Blade of Shadows/levels` application data directory. They are always
+available in **Select Level**, independently of campaign progression. Save games
+are stored in the same application data root.
 
 ## Project Layout
 

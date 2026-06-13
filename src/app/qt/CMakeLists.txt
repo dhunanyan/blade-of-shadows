@@ -25,6 +25,8 @@ if (DEFINED QT_PACKAGE_PREFIX)
         mainwindow.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/game_session.h
         game_session.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/editor_palette.h
+        editor_palette.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/music_player.h
         music_player.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/tilemapper.h
@@ -34,6 +36,7 @@ if (DEFINED QT_PACKAGE_PREFIX)
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/settings_repository.h
         settings_repository.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/game_settings.h
+        ${CMAKE_SOURCE_DIR}/include/game/app/level_selection.h
         ${CMAKE_SOURCE_DIR}/include/game/app/game_controller.h
         ${CMAKE_SOURCE_DIR}/include/game/app/input_mapper.h
         ${CMAKE_SOURCE_DIR}/include/game/app/input_state.h
