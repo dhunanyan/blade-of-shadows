@@ -1,4 +1,5 @@
 #include "game/renderer/scene_renderer.h"
+#include <algorithm>
 #include <cmath>
 #include <QFont>
 #include <QColor>
@@ -82,11 +83,19 @@ float SceneRenderer::updateCameraX(const Engine& engine, const QSize& viewportSi
   if (!cameraInitialized_)
   {
     // Start with player in the left part of the screen (around chunk1/chunk2 split).
-    cameraX_ = std::clamp(engine.playerPixelX() - leftTrigger, 0.0f, maxCameraX);
+    cameraX_ = std::clamp(
+        engine.playerBounds().origin.x +
+            engine.playerBounds().size.width * 0.5f -
+            leftTrigger,
+        0.0f,
+        maxCameraX);
     cameraInitialized_ = true;
   }
 
-  const float playerScreenX = engine.playerPixelX() - cameraX_;
+  const float playerScreenX =
+      engine.playerBounds().origin.x +
+      engine.playerBounds().size.width * 0.5f -
+      cameraX_;
   const int moveIntentX = engine.playerMoveIntentX();
 
   if (moveIntentX < 0 && playerScreenX < leftTrigger)
@@ -110,7 +119,11 @@ int SceneRenderer::menuItemAtPoint(const MenuView& menuView, const QSize& target
   }
 
   const int panelWidth = targetSize.width() * 2 / 5;
-  const int panelHeight = targetSize.height() * 3 / 5;
+  const int panelHeight = std::min(
+      targetSize.height() - 40,
+      std::max(
+          targetSize.height() * 3 / 5,
+          110 + static_cast<int>(menuView.items.size()) * 40));
   const int panelX = (targetSize.width() - panelWidth) / 2;
   const int panelY = (targetSize.height() - panelHeight) / 2;
 
@@ -169,14 +182,14 @@ void SceneRenderer::drawPlayer(
     frame = frame.transformed(QTransform().scale(-1, 1));
   }
 
-  const auto [topLeft, bottomRight] = EnemyPresentation::positionToRectPoints(engine.playerPosition(), tileSizePx);
-  const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
-  const QSize targetSize(cellSize.x() * playerScale, cellSize.y() * playerScale);
-
-  const int playerX = static_cast<int>(std::lround(engine.playerPixelX())) - cameraOffsetXPx;
-  const int playerY = static_cast<int>(std::lround(engine.playerPixelY()));
-  const int drawX = playerX - (targetSize.width() - cellSize.x()) / 2;
-  const int drawY = playerY + cellSize.y() - targetSize.height();
+  const WorldRect body = engine.playerBounds();
+  const QSize targetSize(tileSizePx * playerScale, tileSizePx * playerScale);
+  const int centerX =
+      static_cast<int>(std::lround(body.origin.x + body.size.width * 0.5f)) -
+      cameraOffsetXPx;
+  const int feetY = static_cast<int>(std::lround(body.bottom()));
+  const int drawX = centerX - targetSize.width() / 2;
+  const int drawY = feetY - targetSize.height();
   const QRect targetRect(QPoint(drawX, drawY), targetSize);
   painter.drawPixmap(targetRect, frame);
 }
@@ -342,14 +355,14 @@ void SceneRenderer::drawDoubleJumpFx(
   }
 
   const double t = 1.0 - (static_cast<double>(ticksLeft) / static_cast<double>(kFxDuration));
-  const auto [topLeft, bottomRight] = EnemyPresentation::positionToRectPoints(engine.playerPosition(), tileSizePx);
-  const QPoint cellSize = bottomRight - topLeft + QPoint(1, 1);
-  const QSize playerSize(cellSize.x() * playerScale, cellSize.y() * playerScale);
-
-  const int playerX = static_cast<int>(std::lround(engine.playerPixelX())) - cameraOffsetXPx;
-  const int playerY = static_cast<int>(std::lround(engine.playerPixelY()));
-  const int drawX = playerX - (playerSize.width() - cellSize.x()) / 2;
-  const int drawY = playerY + cellSize.y() - playerSize.height();
+  const WorldRect body = engine.playerBounds();
+  const QSize playerSize(tileSizePx * playerScale, tileSizePx * playerScale);
+  const int playerCenterX =
+      static_cast<int>(std::lround(body.origin.x + body.size.width * 0.5f)) -
+      cameraOffsetXPx;
+  const int feetY = static_cast<int>(std::lround(body.bottom()));
+  const int drawX = playerCenterX - playerSize.width() / 2;
+  const int drawY = feetY - playerSize.height();
   const int centerX = drawX + playerSize.width() / 2;
   const int baseY = drawY + playerSize.height() - 6;
 
@@ -407,7 +420,11 @@ void SceneRenderer::drawMenuOverlay(QPainter& painter, const QSize& targetSize, 
   painter.fillRect(QRect(QPoint(0, 0), targetSize), QColor(0, 0, 0, 150));
 
   const int panelWidth = targetSize.width() * 2 / 5;
-  const int panelHeight = targetSize.height() * 3 / 5;
+  const int panelHeight = std::min(
+      targetSize.height() - 40,
+      std::max(
+          targetSize.height() * 3 / 5,
+          110 + static_cast<int>(menuView.items.size()) * 40));
   const int panelX = (targetSize.width() - panelWidth) / 2;
   const int panelY = (targetSize.height() - panelHeight) / 2;
   const QRect panelRect(panelX, panelY, panelWidth, panelHeight);
@@ -445,7 +462,11 @@ void SceneRenderer::drawMenuOverlay(QPainter& painter, const QSize& targetSize, 
       painter.setPen(Qt::white);
     }
 
-    painter.drawText(itemRect, Qt::AlignVCenter | Qt::AlignLeft, QString::fromStdString(menuView.items[static_cast<std::size_t>(index)]));
+    const QString label = painter.fontMetrics().elidedText(
+        QString::fromStdString(menuView.items[static_cast<std::size_t>(index)]),
+        Qt::ElideRight,
+        itemRect.width());
+    painter.drawText(itemRect, Qt::AlignVCenter | Qt::AlignLeft, label);
   }
 
   painter.restore();

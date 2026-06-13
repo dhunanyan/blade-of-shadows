@@ -1,6 +1,7 @@
 #include "game/app/qt/save_game_repository.h"
 
 #include <algorithm>
+#include <cmath>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -24,6 +25,20 @@ Position positionFromJson(const QJsonObject& object)
   return Position(
       std::max(0, object.value(QString::fromUtf8("x")).toInt()),
       std::max(0, object.value(QString::fromUtf8("y")).toInt()));
+}
+
+QString directionToString(Direction direction)
+{
+  return direction == Direction::LEFT
+             ? QString::fromUtf8("left")
+             : QString::fromUtf8("right");
+}
+
+Direction directionFromString(const QString& value)
+{
+  return value == QString::fromUtf8("left")
+             ? Direction::LEFT
+             : Direction::RIGHT;
 }
 } // namespace
 
@@ -58,13 +73,16 @@ bool SaveGameRepository::save(const SaveGameData& data) const
   const QJsonObject playerObject{
       {QString::fromUtf8("pixelX"), data.snapshot.playerPixelX},
       {QString::fromUtf8("pixelY"), data.snapshot.playerPixelY},
+      {QString::fromUtf8("velocityY"), data.snapshot.playerVelocityY},
+      {QString::fromUtf8("direction"), directionToString(data.snapshot.playerDirection)},
+      {QString::fromUtf8("remainingAirJumps"), data.snapshot.remainingAirJumps},
       {QString::fromUtf8("health"), data.snapshot.playerHealth},
       {QString::fromUtf8("maxHealth"), data.snapshot.playerMaxHealth},
       {QString::fromUtf8("coins"), data.snapshot.coins},
       {QString::fromUtf8("score"), data.snapshot.score}};
 
   const QJsonObject root{
-      {QString::fromUtf8("version"), 1},
+      {QString::fromUtf8("version"), 2},
       {QString::fromUtf8("levelId"), data.levelId},
       {QString::fromUtf8("player"), playerObject},
       {QString::fromUtf8("remainingCoins"), coinArray},
@@ -98,7 +116,8 @@ std::optional<SaveGameData> SaveGameRepository::load() const
   }
 
   const QJsonObject root = document.object();
-  if (root.value(QString::fromUtf8("version")).toInt() != 1)
+  const int version = root.value(QString::fromUtf8("version")).toInt();
+  if (version != 1 && version != 2)
   {
     return std::nullopt;
   }
@@ -108,6 +127,24 @@ std::optional<SaveGameData> SaveGameRepository::load() const
   const QJsonObject player = root.value(QString::fromUtf8("player")).toObject();
   data.snapshot.playerPixelX = static_cast<float>(player.value(QString::fromUtf8("pixelX")).toDouble());
   data.snapshot.playerPixelY = static_cast<float>(player.value(QString::fromUtf8("pixelY")).toDouble());
+  if (!std::isfinite(data.snapshot.playerPixelX) ||
+      !std::isfinite(data.snapshot.playerPixelY))
+  {
+    return std::nullopt;
+  }
+  if (version == 1)
+  {
+    // Version 1 stored a 24x24 collision cell. Preserve its center and feet
+    // when migrating to the 16x32 player body.
+    data.snapshot.playerPixelX += 4.0f;
+    data.snapshot.playerPixelY -= 8.0f;
+  }
+  data.snapshot.playerVelocityY =
+      static_cast<float>(player.value(QString::fromUtf8("velocityY")).toDouble(0.0));
+  data.snapshot.playerDirection =
+      directionFromString(player.value(QString::fromUtf8("direction")).toString());
+  data.snapshot.remainingAirJumps =
+      std::clamp(player.value(QString::fromUtf8("remainingAirJumps")).toInt(1), 0, 1);
   data.snapshot.playerHealth = player.value(QString::fromUtf8("health")).toInt(5);
   data.snapshot.playerMaxHealth = player.value(QString::fromUtf8("maxHealth")).toInt(5);
   data.snapshot.coins = player.value(QString::fromUtf8("coins")).toInt();

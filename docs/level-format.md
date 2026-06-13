@@ -58,7 +58,16 @@ Compact rectangles:
 }
 ```
 
-The exit unlocks after all coins are collected. Invalid player spawns are resolved to the closest non-solid standing cell.
+The exit unlocks after all coins are collected.
+
+`playerStart` is a standing grid cell, not a raw sprite or pixel coordinate. The
+player body's feet are placed exactly on the bottom edge of that cell. Spawn
+validation checks the entire player body rather than only the selected cell. If
+the body would overlap a solid tile, the closest valid standing cell is used.
+
+Enemy, coin, and exit cells must not overlap solid tiles. The editor prevents
+placing entities inside collision cells and removes entities when a solid tile
+is painted over their cell.
 
 ## Custom Levels
 

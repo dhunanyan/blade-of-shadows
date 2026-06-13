@@ -16,18 +16,22 @@ set(GAME_CORE_HEADERS
     include/game/core/direction.h
     include/game/core/enemy.h
     include/game/core/engine.h
+    include/game/core/game_event.h
+    include/game/core/level_definition.h
     include/game/core/object.h
     include/game/core/player.h
+    include/game/core/player_physics.h
     include/game/core/position.h
-    include/game/core/stage.h
+    include/game/core/world_geometry.h
 )
 
 set(GAME_CORE_SOURCES
     src/core/enemy.cpp
     src/core/engine.cpp
+    src/core/level_definition.cpp
     src/core/object.cpp
     src/core/player.cpp
-    src/core/stage.cpp
+    src/core/player_physics.cpp
 )
 
 add_library(game_core ${GAME_CORE_HEADERS} ${GAME_CORE_SOURCES})

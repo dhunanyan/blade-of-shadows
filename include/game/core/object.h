@@ -23,10 +23,6 @@ public:
   void moveUp();
   void moveRight();
   void moveDown();
-  void moveUpLeft();
-  void moveUpRight();
-  void moveDownLeft();
-  void moveDownRight();
   void setPosition(Position position)
   {
     position_ = position;

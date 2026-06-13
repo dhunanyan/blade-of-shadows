@@ -149,6 +149,11 @@ bool TileMapper::loadFromDevice(QIODevice& device)
     levelExit_ = Position(exitX, exitY);
   }
 
+  if (!hasPlayerStart_)
+  {
+    return false;
+  }
+
   loaded_ = true;
   return true;
 }
@@ -190,6 +195,17 @@ bool TileMapper::paintTile(int gridX, int gridY, int srcX, int srcY, bool solid)
   if (!loaded_ || tileset_.isNull())
   {
     return false;
+  }
+  if (solid &&
+      hasPlayerStart_ &&
+      playerStartX_ == gridX &&
+      playerStartY_ == gridY)
+  {
+    return false;
+  }
+  if (solid)
+  {
+    removeEntitiesAt(gridX, gridY);
   }
   removeTile(gridX, gridY);
   return addTile(
@@ -234,6 +250,10 @@ bool TileMapper::setPlayerStart(int gridX, int gridY)
   {
     return false;
   }
+  if (isSolidAt(gridX, gridY))
+  {
+    return false;
+  }
   hasPlayerStart_ = true;
   playerStartX_ = gridX;
   playerStartY_ = gridY;
@@ -243,6 +263,10 @@ bool TileMapper::setPlayerStart(int gridX, int gridY)
 bool TileMapper::toggleEnemySpawn(int gridX, int gridY)
 {
   if (gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  if (isSolidAt(gridX, gridY))
   {
     return false;
   }
@@ -265,6 +289,10 @@ bool TileMapper::toggleCoinSpawn(int gridX, int gridY)
   {
     return false;
   }
+  if (isSolidAt(gridX, gridY))
+  {
+    return false;
+  }
   const Position target(gridX, gridY);
   const auto it = std::find(coinSpawns_.begin(), coinSpawns_.end(), target);
   if (it != coinSpawns_.end())
@@ -281,6 +309,10 @@ bool TileMapper::toggleCoinSpawn(int gridX, int gridY)
 bool TileMapper::setLevelExit(int gridX, int gridY)
 {
   if (gridX < 0 || gridY < 0 || gridX >= levelWidth_ || gridY >= levelHeight_)
+  {
+    return false;
+  }
+  if (isSolidAt(gridX, gridY))
   {
     return false;
   }
@@ -305,7 +337,7 @@ void TileMapper::removeEntitiesAt(int gridX, int gridY)
 
 bool TileMapper::saveToJsonFile(const QString& levelFilePath) const
 {
-  if (!loaded_)
+  if (!loaded_ || !hasPlayerStart_)
   {
     return false;
   }
@@ -367,33 +399,34 @@ bool TileMapper::saveToJsonFile(const QString& levelFilePath) const
 
 Position TileMapper::safePlayerStart() const
 {
-  if (!loaded_ || levelWidth_ <= 0 || levelHeight_ <= 0)
-  {
-    return Position();
-  }
+  return levelDefinition().resolveStandingSpawn(
+      Position(playerStartX_, playerStartY_));
+}
 
-  int x = std::clamp(playerStartX_, 0, levelWidth_ - 1);
-  int y = std::clamp(playerStartY_, 0, levelHeight_ - 1);
-  if (!isSolidAt(x, y) && (y + 1 >= levelHeight_ || isSolidAt(x, y + 1)))
-  {
-    return Position(x, y);
-  }
+LevelDefinition TileMapper::levelDefinition() const
+{
+  LevelDefinition definition(
+      std::max(1, levelWidth_),
+      std::max(1, levelHeight_),
+      std::max(1, tileSizePx_));
+  definition.setId(levelId_.toStdString());
+  definition.setDisplayName(levelName_.toStdString());
+  definition.setPlayerSpawn(Position(playerStartX_, playerStartY_));
+  definition.setEnemySpawns(enemySpawns_);
+  definition.setCoinSpawns(coinSpawns_);
+  definition.setExit(levelExit_);
 
-  for (int distance = 0; distance < levelHeight_; ++distance)
+  for (int y = 0; y < levelHeight_; ++y)
   {
-    const int candidates[] = {y - distance, y + distance};
-    for (const int candidateY : candidates)
+    for (int x = 0; x < levelWidth_; ++x)
     {
-      if (candidateY < 0 || candidateY >= levelHeight_) continue;
-      if (!isSolidAt(x, candidateY) &&
-          (candidateY + 1 >= levelHeight_ || isSolidAt(x, candidateY + 1)))
+      if (isSolidAt(x, y))
       {
-        return Position(x, candidateY);
+        definition.setSolid(Position(x, y), true);
       }
     }
   }
-
-  return Position(x, 0);
+  return definition;
 }
 
 bool TileMapper::isSolidAt(int gridX, int gridY) const

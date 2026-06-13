@@ -31,23 +31,6 @@ struct Position
     x_++;
     return *this;
   }
-  Position& moveUpRight()
-  {
-    return moveUp().moveRight();
-  }
-  Position& moveUpLeft()
-  {
-    return moveUp().moveLeft();
-  }
-  Position& moveDownRight()
-  {
-    return moveDown().moveRight();
-  }
-  Position& moveDownLeft()
-  {
-    return moveDown().moveLeft();
-  }
-
   bool operator==(const Position&) const = default;
 };
 

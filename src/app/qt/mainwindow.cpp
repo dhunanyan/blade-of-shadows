@@ -1,17 +1,12 @@
-#include <QAudioOutput>
 #include <algorithm>
 #include <cmath>
 #include <QApplication>
 #include <QDebug>
-#include <QDir>
 #include <QEvent>
-#include <QFile>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMouseEvent>
-#include <QMediaPlayer>
 #include <QPainter>
-#include <QStandardPaths>
 #include <QUrl>
 #include "game/core/position.h"
 #include "game/app/qt/mainwindow.h"
@@ -20,7 +15,8 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui_(new Ui::MainWindow),
-      gameController_(60, 25)
+      gameController_(60, 25),
+      session_(gameController_.engine())
 {
     ui_->setupUi(this);
     ui_->background->setScaledContents(false);
@@ -29,42 +25,77 @@ MainWindow::MainWindow(QWidget *parent)
     ui_->background->installEventFilter(this);
 
     gameController_.setNewGameHandler([this](bool newCampaign) {
-        if (newCampaign)
+        const bool loaded =
+            newCampaign ? session_.startNewCampaign() : session_.restartLevel();
+        if (loaded)
         {
-            loadLevelById(campaignLevelIds_.front(), true);
+            playerPresentation_ = PlayerPresentation();
+            sceneRenderer_.resetCamera();
         }
-        else
-        {
-            resetCurrentLevel();
-        }
+        return loaded;
     });
-    gameController_.setNextLevelHandler([this]() { return loadNextLevel(); });
-    gameController_.setSaveGameHandler([this]() { return saveGame(); });
-    gameController_.setLoadGameHandler([this]() { return loadGame(); });
-    gameController_.setLevelEditorHandler([this]() {
-        if (QFile::exists(customLevelPath()))
+    gameController_.setNextLevelHandler([this]() {
+        const bool loaded = session_.loadNextLevel();
+        if (loaded)
         {
-            tileMapper_.loadFromJsonFile(customLevelPath());
+            playerPresentation_ = PlayerPresentation();
+            sceneRenderer_.resetCamera();
         }
-        gameController_.engine().resetSession(
-            tileMapper_.safePlayerStart(),
-            {},
-            {},
-            std::nullopt);
-        updateEditorStatus();
+        return loaded;
+    });
+    gameController_.setSaveGameHandler([this]() { return session_.saveGame(); });
+    gameController_.setLoadGameHandler([this]() {
+        const bool loaded = session_.loadGame();
+        if (loaded)
+        {
+            playerPresentation_ = PlayerPresentation();
+            sceneRenderer_.resetCamera();
+        }
+        return loaded;
+    });
+    gameController_.setLevelEditorHandler([this]() {
+        const bool loaded = session_.enterEditor();
+        if (loaded)
+        {
+            playerPresentation_ = PlayerPresentation();
+            sceneRenderer_.resetCamera();
+            updateEditorStatus();
+        }
+        return loaded;
     });
     gameController_.setSaveLevelHandler([this]() { return saveCustomLevel(); });
-    gameController_.setPlayEditedLevelHandler([this]() { resetCurrentLevel(); });
+    gameController_.setPlayEditedLevelHandler([this]() {
+        const bool loaded = session_.playEditedLevel();
+        if (loaded)
+        {
+            playerPresentation_ = PlayerPresentation();
+            sceneRenderer_.resetCamera();
+        }
+        return loaded;
+    });
     gameController_.setSettingsChangedHandler([this](const GameSettings& settings) {
         settingsRepository_.save(settings);
         applySettings(settings);
     });
+    gameController_.setMusicNavigationHandlers(
+        [this]() { musicPlayer_.previous(); },
+        [this]() { musicPlayer_.next(); });
+    connect(
+        &musicPlayer_,
+        &MusicPlayer::currentTrackChanged,
+        this,
+        [this](const QString& name, int)
+        {
+            gameController_.setCurrentMusicTrack(name.toStdString());
+        });
+    gameController_.setCurrentMusicTrack(musicPlayer_.currentTrackName().toStdString());
     gameController_.setSettings(settingsRepository_.load());
 
-    if (!loadLevel(QString::fromUtf8(":/levels/level_01.json"), true))
+    if (!session_.loadInitialLevel())
     {
         qFatal("Could not load the initial level.");
     }
+    sceneRenderer_.resetCamera();
 
     if (!assets_.loadAll())
     {
@@ -74,15 +105,14 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&timer_, &QTimer::timeout, this, &MainWindow::update);
     timer_.start(16);
 
-    player_.setAudioOutput(&audioOutput_);
-    player_.setSource(QUrl(QString::fromUtf8("qrc:/music.mp3")));
-    player_.setLoops(QMediaPlayer::Infinite);
-    attackSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/attack.wav")));
-    jumpSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/jump.wav")));
-    coinSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/coin.wav")));
-    hurtSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/hurt.wav")));
+    attackSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/shoot-2.wav")));
+    jumpSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/jump-1.wav")));
+    doubleJumpSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/powerup-1.wav")));
+    coinSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/coin-1.wav")));
+    hurtSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/damage-1.wav")));
+    deathSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/die-1.wav")));
+    levelCompleteSound_.setSource(QUrl(QString::fromUtf8("qrc:/audio/sfx/level-complete-1.wav")));
     applySettings(gameController_.settings());
-    player_.play();
 }
 
 MainWindow::~MainWindow()
@@ -94,11 +124,11 @@ void MainWindow::redrawView()
 {
     const QPixmap frame = sceneRenderer_.renderFrame(
         gameController_.engine(),
-        tileMapper_,
+        session_.level(),
         assets_,
         playerPresentation_,
         gameController_.menuView(),
-        tileSizePx_,
+        session_.level().tileSizePx(),
         playerScale_,
         gameController_.mode() == GameMode::LevelEditor,
         gameController_.settings().language);
@@ -161,7 +191,8 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
     }
     if (gameController_.mode() == GameMode::LevelEditor && !event->isAutoRepeat())
     {
-        const int tileCount = tileMapper_.tilesetColumns() * tileMapper_.tilesetRows();
+        const int tileCount =
+            session_.level().tilesetColumns() * session_.level().tilesetRows();
         if ((event->key() == Qt::Key_Q || event->key() == Qt::Key_E) && tileCount > 0)
         {
             const int delta = event->key() == Qt::Key_Q ? -1 : 1;
@@ -265,12 +296,12 @@ void MainWindow::handleEditorPointer(const QPoint& localPoint, Qt::MouseButton b
     }
 
     const int worldX = framePoint.x() + static_cast<int>(std::lround(sceneRenderer_.cameraOffsetX()));
-    const int gridX = worldX / tileSizePx_;
-    const int gridY = framePoint.y() / tileSizePx_;
+    const int gridX = worldX / session_.level().tileSizePx();
+    const int gridY = framePoint.y() / session_.level().tileSizePx();
     if (button == Qt::RightButton)
     {
-        tileMapper_.removeTile(gridX, gridY);
-        tileMapper_.removeEntitiesAt(gridX, gridY);
+        session_.level().removeTile(gridX, gridY);
+        session_.level().removeEntitiesAt(gridX, gridY);
     }
     else if (button == Qt::LeftButton)
     {
@@ -278,8 +309,8 @@ void MainWindow::handleEditorPointer(const QPoint& localPoint, Qt::MouseButton b
         {
         case EditorTool::Tile:
         {
-            const int columns = std::max(1, tileMapper_.tilesetColumns());
-            tileMapper_.paintTile(
+            const int columns = std::max(1, session_.level().tilesetColumns());
+            session_.level().paintTile(
                 gridX,
                 gridY,
                 editorTileIndex_ % columns,
@@ -288,129 +319,46 @@ void MainWindow::handleEditorPointer(const QPoint& localPoint, Qt::MouseButton b
             break;
         }
         case EditorTool::PlayerSpawn:
-            tileMapper_.setPlayerStart(gridX, gridY);
+            session_.level().setPlayerStart(gridX, gridY);
             break;
         case EditorTool::Enemy:
-            tileMapper_.toggleEnemySpawn(gridX, gridY);
+            session_.level().toggleEnemySpawn(gridX, gridY);
             break;
         case EditorTool::Coin:
-            tileMapper_.toggleCoinSpawn(gridX, gridY);
+            session_.level().toggleCoinSpawn(gridX, gridY);
             break;
         case EditorTool::Exit:
-            tileMapper_.setLevelExit(gridX, gridY);
+            session_.level().setLevelExit(gridX, gridY);
             break;
         }
     }
-}
-
-bool MainWindow::loadLevel(const QString& resourcePath, bool resetSession)
-{
-    if (!tileMapper_.loadFromJsonResource(resourcePath))
-    {
-        qWarning() << "Could not load level:" << resourcePath;
-        return false;
-    }
-
-    gameController_.engine().setSolidQuery([this](int x, int y) {
-        return tileMapper_.isSolidAt(x, y);
-    });
-    if (resetSession)
-    {
-        resetCurrentLevel();
-    }
-    return true;
-}
-
-bool MainWindow::loadLevelById(const QString& levelId, bool resetSession)
-{
-    if (levelId == QString::fromUtf8("custom_level"))
-    {
-        if (!tileMapper_.loadFromJsonFile(customLevelPath()))
-        {
-            return false;
-        }
-        if (resetSession)
-        {
-            resetCurrentLevel();
-        }
-        return true;
-    }
-    return loadLevel(QString::fromUtf8(":/levels/%1.json").arg(levelId), resetSession);
-}
-
-bool MainWindow::loadNextLevel()
-{
-    const int currentIndex = campaignLevelIds_.indexOf(tileMapper_.levelId());
-    if (currentIndex < 0 || currentIndex + 1 >= campaignLevelIds_.size())
-    {
-        return false;
-    }
-    return loadLevelById(campaignLevelIds_.at(currentIndex + 1), true);
-}
-
-void MainWindow::resetCurrentLevel()
-{
-    gameController_.engine().resetSession(
-        tileMapper_.safePlayerStart(),
-        tileMapper_.enemySpawns(),
-        tileMapper_.coinSpawns(),
-        tileMapper_.levelExit());
-    playerPresentation_ = PlayerPresentation();
-}
-
-bool MainWindow::saveGame()
-{
-    const SaveGameData data{
-        tileMapper_.levelId(),
-        gameController_.engine().snapshot()};
-    const bool saved = saveGameRepository_.save(data);
-    qDebug() << (saved ? "Game saved to" : "Could not save game to")
-             << saveGameRepository_.savePath();
-    return saved;
-}
-
-bool MainWindow::loadGame()
-{
-    const auto saved = saveGameRepository_.load();
-    if (!saved)
-    {
-        qWarning() << "No valid save game found.";
-        return false;
-    }
-
-    if (!loadLevelById(saved->levelId, false))
-    {
-        return false;
-    }
-    gameController_.engine().restoreSnapshot(saved->snapshot);
-    playerPresentation_ = PlayerPresentation();
-    return true;
 }
 
 void MainWindow::applySettings(const GameSettings& settings)
 {
-    audioOutput_.setMuted(!settings.musicEnabled);
-    audioOutput_.setVolume(static_cast<float>(settings.musicVolume) / 100.0f);
+    musicPlayer_.setVolume(settings.musicVolume);
+    musicPlayer_.setEnabled(settings.musicEnabled);
     const bool muted = !settings.soundEnabled;
     const float volume = static_cast<float>(settings.soundVolume) / 100.0f;
-    for (QSoundEffect* effect : {&attackSound_, &jumpSound_, &coinSound_, &hurtSound_})
+    for (QSoundEffect* effect : {
+             &attackSound_,
+             &jumpSound_,
+             &doubleJumpSound_,
+             &coinSound_,
+             &hurtSound_,
+             &deathSound_,
+             &levelCompleteSound_})
     {
         effect->setMuted(muted);
         effect->setVolume(volume);
     }
 }
 
-QString MainWindow::customLevelPath() const
-{
-    const QString root = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    return QDir(root).filePath(QString::fromUtf8("levels/custom_level.json"));
-}
-
 bool MainWindow::saveCustomLevel()
 {
-    const bool saved = tileMapper_.saveToJsonFile(customLevelPath());
+    const bool saved = session_.saveCustomLevel();
     qDebug() << (saved ? "Custom level saved to" : "Could not save custom level to")
-             << customLevelPath();
+             << session_.customLevelPath();
     ui_->statusbar->showMessage(
         saved ? QString::fromUtf8("Custom level saved")
               : QString::fromUtf8("Could not save custom level"),
@@ -420,7 +368,7 @@ bool MainWindow::saveCustomLevel()
 
 void MainWindow::updateEditorStatus()
 {
-    const int columns = std::max(1, tileMapper_.tilesetColumns());
+    const int columns = std::max(1, session_.level().tilesetColumns());
     const QString toolNames[] = {
         QString::fromUtf8("Tile"),
         QString::fromUtf8("Player Spawn"),
@@ -437,30 +385,34 @@ void MainWindow::updateEditorStatus()
 
 void MainWindow::update()
 {
-    const bool attackWasActive = gameController_.engine().isPlayerAttackInProgress();
-    const float previousVelocityY = gameController_.engine().playerVelocityY();
-    const int previousDoubleJumpTicks = gameController_.engine().playerDoubleJumpFxTicks();
-    const int previousCoins = gameController_.engine().playerCoins();
-    const int previousHealth = gameController_.engine().playerHealth();
-
     gameController_.tick();
 
-    if (!attackWasActive && gameController_.engine().isPlayerAttackInProgress())
+    for (const GameEvent event : gameController_.engine().takeEvents())
     {
-        attackSound_.play();
-    }
-    if ((previousVelocityY >= 0.0f && gameController_.engine().playerVelocityY() < 0.0f) ||
-        gameController_.engine().playerDoubleJumpFxTicks() > previousDoubleJumpTicks)
-    {
-        jumpSound_.play();
-    }
-    if (gameController_.engine().playerCoins() > previousCoins)
-    {
-        coinSound_.play();
-    }
-    if (gameController_.engine().playerHealth() < previousHealth)
-    {
-        hurtSound_.play();
+        switch (event)
+        {
+        case GameEvent::AttackStarted:
+            attackSound_.play();
+            break;
+        case GameEvent::JumpStarted:
+            jumpSound_.play();
+            break;
+        case GameEvent::DoubleJumpStarted:
+            doubleJumpSound_.play();
+            break;
+        case GameEvent::CoinCollected:
+            coinSound_.play();
+            break;
+        case GameEvent::PlayerDamaged:
+            hurtSound_.play();
+            break;
+        case GameEvent::PlayerDefeated:
+            deathSound_.play();
+            break;
+        case GameEvent::LevelCompleted:
+            levelCompleteSound_.play();
+            break;
+        }
     }
 
     playerPresentation_.update(gameController_.input(), gameController_.engine(), assets_);

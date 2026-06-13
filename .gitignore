@@ -21,3 +21,6 @@ tests/lib/
 
 ### local machine ###
 .DS_Store
+
+### Local lossless audio masters ###
+assets/audio/music/*.wav

@@ -22,6 +22,30 @@ struct EngineUnderTest: public Engine
     using Engine::randEnemies;
 };
 
+LevelDefinition levelWithSolidRows(
+    int width,
+    int height,
+    int firstSolidRow,
+    std::optional<int> extraSolidRow = std::nullopt)
+{
+    LevelDefinition level(width, height, 24);
+    for (int y = firstSolidRow; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            level.setSolid(Position(x, y), true);
+        }
+    }
+    if (extraSolidRow)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            level.setSolid(Position(x, *extraSolidRow), true);
+        }
+    }
+    return level;
+}
+
 TEST_F(EngineTester, engineConstructedWithWidthAndHeight)
 {
 #ifdef UNIMPLEMENTED_engineConstructedWithWidthAndHeight
@@ -57,9 +81,10 @@ TEST_F(EngineTester, engineCanMovePlayer)
     ADD_FAILURE() << "Not implemented: UNIMPLEMENTED_engineCanMovePlayer";
 #else
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y >= static_cast<int>(height / 2) + 1;
-    });
+    engine.loadLevel(levelWithSolidRows(
+        static_cast<int>(width),
+        static_cast<int>(height),
+        static_cast<int>(height / 2) + 1));
 
     const float defaultX = engine.playerPixelX();
     const float defaultY = engine.playerPixelY();
@@ -121,9 +146,7 @@ TEST_F(EngineTester, engineHandlesEnemies)
 TEST_F(EngineTester, sessionLoadsDeterministicEntitiesAndCollectsCoins)
 {
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y >= 6;
-    });
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
 
     const Position spawn(2, 5);
     engine.resetSession(
@@ -143,12 +166,119 @@ TEST_F(EngineTester, sessionLoadsDeterministicEntitiesAndCollectsCoins)
     EXPECT_FALSE(engine.isLevelComplete());
 }
 
+TEST_F(EngineTester, sessionSpawnAboveSolidGroundStartsAtExactPosition)
+{
+    EngineUnderTest engine(width, height);
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
+
+    const Position spawn(2, 5);
+    engine.resetSession(spawn, {}, {}, std::nullopt);
+
+    EXPECT_EQ(spawn, engine.playerPosition());
+    EXPECT_FLOAT_EQ(52.0f, engine.playerPixelX());
+    EXPECT_FLOAT_EQ(112.0f, engine.playerPixelY());
+    EXPECT_TRUE(engine.playerIsGrounded());
+    EXPECT_FLOAT_EQ(144.0f, engine.playerBounds().bottom());
+}
+
+TEST_F(EngineTester, playerCanJumpImmediatelyAfterLevelSpawn)
+{
+    EngineUnderTest engine(width, height);
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
+    engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
+
+    const float startingY = engine.playerPixelY();
+    engine.requestPlayerJump();
+    engine.setPlayerJumpHeld(true);
+    engine.update();
+
+    EXPECT_LT(engine.playerPixelY(), startingY);
+    EXPECT_LT(engine.playerVelocityY(), 0.0f);
+    EXPECT_FALSE(engine.playerIsGrounded());
+}
+
+TEST_F(EngineTester, fallingPlayerLandsExactlyOnGroundWithoutPenetration)
+{
+    EngineUnderTest engine(width, height);
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
+    engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
+    engine.requestPlayerJump();
+    engine.setPlayerJumpHeld(false);
+    engine.update();
+
+    for (int tick = 0; tick < 240 && !engine.playerIsGrounded(); ++tick)
+    {
+        engine.update();
+    }
+
+    EXPECT_TRUE(engine.playerIsGrounded());
+    EXPECT_FLOAT_EQ(144.0f, engine.playerBounds().bottom());
+    EXPECT_FLOAT_EQ(0.0f, engine.playerVelocityY());
+}
+
+TEST_F(EngineTester, playerCannotMoveThroughSolidWall)
+{
+    LevelDefinition level = levelWithSolidRows(width, height, 6);
+    for (int y = 0; y < 6; ++y)
+    {
+        level.setSolid(Position(4, y), true);
+    }
+
+    EngineUnderTest engine(width, height);
+    engine.loadLevel(std::move(level));
+    engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
+    engine.setPlayerMoveIntentX(1);
+    for (int tick = 0; tick < 60; ++tick)
+    {
+        engine.update();
+    }
+
+    EXPECT_LE(engine.playerBounds().right(), 4.0f * 24.0f);
+}
+
+TEST_F(EngineTester, snapshotRestoresMidAirBodyAndVelocity)
+{
+    EngineUnderTest engine(width, height);
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
+    engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
+    engine.requestPlayerJump();
+    engine.setPlayerJumpHeld(true);
+    for (int tick = 0; tick < 5; ++tick)
+    {
+        engine.update();
+    }
+
+    const Engine::Snapshot saved = engine.snapshot();
+    engine.resetSession();
+    engine.restoreSnapshot(saved);
+
+    EXPECT_FLOAT_EQ(saved.playerPixelX, engine.playerPixelX());
+    EXPECT_FLOAT_EQ(saved.playerPixelY, engine.playerPixelY());
+    EXPECT_FLOAT_EQ(saved.playerVelocityY, engine.playerVelocityY());
+    EXPECT_EQ(saved.playerDirection, engine.playerDirection());
+}
+
+TEST_F(EngineTester, gameplayEventsAreConsumedOnlyOnce)
+{
+    EngineUnderTest engine(width, height);
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
+    engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
+    engine.requestPlayerJump();
+    engine.update();
+
+    const auto firstEvents = engine.takeEvents();
+    const auto secondEvents = engine.takeEvents();
+
+    EXPECT_NE(
+        std::find(firstEvents.begin(), firstEvents.end(), GameEvent::JumpStarted),
+        firstEvents.end());
+    EXPECT_TRUE(secondEvents.empty());
+}
+
 TEST_F(EngineTester, attackDamagesEnemyOnlyOncePerSwing)
 {
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y >= 6;
-    });
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
     engine.resetSession(
         Position(2, 5),
         {Position(3, 5)},
@@ -169,9 +299,7 @@ TEST_F(EngineTester, attackDamagesEnemyOnlyOncePerSwing)
 TEST_F(EngineTester, enemyContactDamagesPlayerAndAppliesCooldown)
 {
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y >= 6;
-    });
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
     engine.resetSession(
         Position(2, 5),
         {Position(2, 5)},
@@ -188,9 +316,7 @@ TEST_F(EngineTester, enemyContactDamagesPlayerAndAppliesCooldown)
 TEST_F(EngineTester, snapshotRestoresProgressAndWorldState)
 {
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y >= 6;
-    });
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
     engine.resetSession(
         Position(2, 5),
         {Position(8, 5)},
@@ -222,9 +348,7 @@ TEST_F(EngineTester, invalidPlayerPositionIsRejected)
 TEST_F(EngineTester, dodgeMovesPlayerAndPreventsContactDamage)
 {
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y >= 6;
-    });
+    engine.loadLevel(levelWithSolidRows(width, height, 6));
     engine.resetSession(
         Position(2, 5),
         {Position(2, 5)},
@@ -243,15 +367,16 @@ TEST_F(EngineTester, dodgeMovesPlayerAndPreventsContactDamage)
 TEST_F(EngineTester, jumpStopsAtSolidCeiling)
 {
     EngineUnderTest engine(width, height);
-    engine.setSolidQuery([&](int, int y) {
-        return y == 4 || y >= 6;
-    });
+    engine.loadLevel(levelWithSolidRows(width, height, 6, 3));
     engine.resetSession(Position(2, 5), {}, {}, std::nullopt);
 
-    const float originalY = engine.playerPixelY();
     engine.requestPlayerJump();
-    engine.update();
+    engine.setPlayerJumpHeld(true);
+    for (int tick = 0; tick < 30; ++tick)
+    {
+        engine.update();
+    }
 
-    EXPECT_FLOAT_EQ(originalY, engine.playerPixelY());
-    EXPECT_FLOAT_EQ(0.0f, engine.playerVelocityY());
+    const float ceilingBottom = 4.0f * 24.0f;
+    EXPECT_GE(engine.playerBounds().top(), ceilingBottom);
 }

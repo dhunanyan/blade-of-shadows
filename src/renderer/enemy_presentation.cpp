@@ -11,7 +11,7 @@ QPoint EnemyPresentation::positionToQPoint(Position position, int tileSizePx)
 std::pair<QPoint, QPoint> EnemyPresentation::positionToRectPoints(Position position, int tileSizePx)
 {
   const QPoint from = positionToQPoint(position, tileSizePx);
-  const QPoint to = positionToQPoint(position.moveUpRight(), tileSizePx) - QPoint(1, 1);
+  const QPoint to = from + QPoint(tileSizePx - 1, tileSizePx - 1);
   return {from, to};
 }
 

@@ -3,6 +3,7 @@
 
 #include "game/core/object.h"
 #include "game/core/direction.h"
+#include "game/core/world_geometry.h"
  
 class Player : public Object
 {
@@ -14,7 +15,6 @@ private:
   int coins_ = 0;
   int score_ = 0;
   int invulnerabilityTicks_ = 0;
-  float velocityY_ = 0.0f;
   bool isGrounded_ = false;
   bool jumpHeld_ = false;
   bool jumpRequested_ = false;
@@ -30,6 +30,7 @@ private:
   bool dodgeRequested_ = false;
   int dodgeTicks_ = 0;
   int dodgeCooldownTicks_ = 0;
+  PhysicsBody body_{{16.0f, 32.0f}};
 
 public:
   Player();
@@ -52,8 +53,8 @@ public:
   void addCoin(int value = 1);
   void addScore(int value);
   void resetProgress();
-  float velocityY() const { return velocityY_; }
-  void setVelocityY(float v) { velocityY_ = v; }
+  float velocityY() const { return body_.velocity().y; }
+  void setVelocityY(float value) { body_.setVelocityY(value); }
   bool isGrounded() const { return isGrounded_; }
   void setIsGrounded(bool v) { isGrounded_ = v; }
   bool jumpHeld() const { return jumpHeld_; }
@@ -85,6 +86,11 @@ public:
   int dodgeCooldownTicks() const { return dodgeCooldownTicks_; }
   void setDodgeCooldownTicks(int value) { dodgeCooldownTicks_ = value; }
   bool isDodging() const { return dodgeTicks_ > 0; }
+  const PhysicsBody& body() const { return body_; }
+  PhysicsBody& body() { return body_; }
+  WorldPoint worldPosition() const { return body_.position(); }
+  WorldRect worldBounds() const { return body_.bounds(); }
+  void setWorldPosition(WorldPoint position) { body_.setPosition(position); }
 };
 
 #endif // GAME_CORE_PLAYER_H

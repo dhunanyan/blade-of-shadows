@@ -12,6 +12,7 @@ Blade of Shadows is a 2D action platformer built with C++23 and Qt 6. It combine
 - Mouse and keyboard menu navigation.
 - Persistent save game and settings storage through Qt application data paths.
 - English and Polish UI text.
+- A 46-track shuffled soundtrack with named tracks, history-aware previous/next controls, and automatic progression.
 - Music and sound toggles with independent volume controls.
 - Data-driven JSON levels and an in-game tile/entity editor.
 - GoogleTest coverage and GitHub/GitLab CI.
@@ -90,9 +91,16 @@ docs/                   Architecture, development, and level documentation
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Audio](docs/audio.md)
 - [Development workflow](docs/development.md)
 - [Level format](docs/level-format.md)
 
 ## Asset Notes
 
 The current enemy, heart, coin, and sound-effect assets are original placeholders intended to be replaced by final production art and audio without changing their Qt resource aliases.
+
+The uncompressed music WAV files are retained locally as source masters and
+ignored by Git to keep the repository manageable. Runtime AAC copies are
+versioned with the game and can be regenerated with
+`./scripts/prepare_music_assets.sh`; see [Audio](docs/audio.md) for the catalog
+and integration details.

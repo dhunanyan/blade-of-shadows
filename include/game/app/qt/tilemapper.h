@@ -5,6 +5,7 @@
 #include <optional>
 #include <QString>
 #include <QPixmap>
+#include "game/core/level_definition.h"
 #include "game/core/position.h"
 
 class QPainter;
@@ -45,6 +46,7 @@ public:
     int playerStartX() const { return playerStartX_; }
     int playerStartY() const { return playerStartY_; }
     Position safePlayerStart() const;
+    LevelDefinition levelDefinition() const;
     const std::vector<Position>& enemySpawns() const { return enemySpawns_; }
     const std::vector<Position>& coinSpawns() const { return coinSpawns_; }
     const std::optional<Position>& levelExit() const { return levelExit_; }

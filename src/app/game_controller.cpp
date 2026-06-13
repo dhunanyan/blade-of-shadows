@@ -1,5 +1,6 @@
 #include "game/app/game_controller.h"
 #include <algorithm>
+#include <utility>
 #include <Qt>
 #include "game/app/input_mapper.h"
 
@@ -110,8 +111,11 @@ void GameController::tick()
     return;
   }
 
-  applyInput();
-  engine_.update();
+  if (mode_ == GameMode::Playing)
+  {
+    applyInput();
+    engine_.update();
+  }
   input_.consumeOneShotSignals();
 
   if (mode_ == GameMode::Playing && !engine_.isPlayerAlive())
@@ -237,6 +241,20 @@ void GameController::rebuildOptionsMenu()
     notifySettingsChanged();
     buildMenus();
   };
+  const auto previousTrack = [this]()
+  {
+    if (previousMusicHandler_)
+    {
+      previousMusicHandler_();
+    }
+  };
+  const auto nextTrack = [this]()
+  {
+    if (nextMusicHandler_)
+    {
+      nextMusicHandler_();
+    }
+  };
 
   menuSystem_.registerMenu(MenuDefinition{
       "options",
@@ -246,6 +264,11 @@ void GameController::rebuildOptionsMenu()
               text("Music: ", "Muzyka: ") +
                   text(settings_.musicEnabled ? "On" : "Off", settings_.musicEnabled ? "Wl." : "Wyl."),
               toggleMusic},
+          MenuItem{
+              text("Now Playing: ", "Teraz gra: ") + currentMusicTrack_,
+              []() {}},
+          MenuItem{text("Previous Track", "Poprzedni utwor"), previousTrack},
+          MenuItem{text("Next Track", "Nastepny utwor"), nextTrack},
           MenuItem{
               text("Sound: ", "Dzwiek: ") +
                   text(settings_.soundEnabled ? "On" : "Off", settings_.soundEnabled ? "Wl." : "Wyl."),
@@ -265,9 +288,9 @@ void GameController::rebuildOptionsMenu()
 
 void GameController::startGame(bool newCampaign)
 {
-  if (newGameHandler_)
+  if (!newGameHandler_ || !newGameHandler_(newCampaign))
   {
-    newGameHandler_(newCampaign);
+    return;
   }
   mode_ = GameMode::Playing;
   menuSystem_.close();
@@ -290,9 +313,9 @@ void GameController::startNextLevel()
 
 void GameController::startLevelEditor()
 {
-  if (levelEditorHandler_)
+  if (!levelEditorHandler_ || !levelEditorHandler_())
   {
-    levelEditorHandler_();
+    return;
   }
   mode_ = GameMode::LevelEditor;
   menuSystem_.close();
@@ -324,9 +347,9 @@ void GameController::saveLevel()
 
 void GameController::playEditedLevel()
 {
-  if (playEditedLevelHandler_)
+  if (!playEditedLevelHandler_ || !playEditedLevelHandler_())
   {
-    playEditedLevelHandler_();
+    return;
   }
   mode_ = GameMode::Playing;
   menuSystem_.close();
@@ -354,6 +377,12 @@ void GameController::setSettings(const GameSettings& settings)
 {
   settings_ = settings;
   buildMenus();
+}
+
+void GameController::setCurrentMusicTrack(std::string trackName)
+{
+  currentMusicTrack_ = std::move(trackName);
+  rebuildOptionsMenu();
 }
 
 void GameController::notifySettingsChanged()

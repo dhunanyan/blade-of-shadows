@@ -29,6 +29,11 @@ public:
       GameLanguage language = GameLanguage::English) const;
   int menuItemAtPoint(const MenuView& menuView, const QSize& targetSize, const QPoint& point) const;
   float cameraOffsetX() const { return cameraX_; }
+  void resetCamera()
+  {
+    cameraX_ = 0.0f;
+    cameraInitialized_ = false;
+  }
 
 private:
   float updateCameraX(const Engine& engine, const QSize& viewportSize, float maxCameraX) const;

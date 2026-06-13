@@ -23,6 +23,10 @@ if (DEFINED QT_PACKAGE_PREFIX)
         gameMain.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/mainwindow.h
         mainwindow.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/game_session.h
+        game_session.cpp
+        ${CMAKE_SOURCE_DIR}/include/game/app/qt/music_player.h
+        music_player.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/tilemapper.h
         tilemapper.cpp
         ${CMAKE_SOURCE_DIR}/include/game/app/qt/save_game_repository.h

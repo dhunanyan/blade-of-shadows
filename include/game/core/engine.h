@@ -2,14 +2,15 @@
 #define GAME_CORE_ENGINE_H
 
 #include <algorithm>
-#include <functional>
 #include <optional>
 #include <utility>
 #include <vector>
 #include <memory> // std::shared_ptr && std::unique_ptr
 #include "game/core/direction.h"
+#include "game/core/game_event.h"
+#include "game/core/level_definition.h"
 #include "game/core/player.h"
-#include "game/core/stage.h"
+#include "game/core/player_physics.h"
 
 struct Position;
 class Enemy;
@@ -31,6 +32,9 @@ public:
 
     float playerPixelX = 0.0f;
     float playerPixelY = 0.0f;
+    float playerVelocityY = 0.0f;
+    Direction playerDirection = Direction::RIGHT;
+    int remainingAirJumps = 1;
     int playerHealth = 5;
     int playerMaxHealth = 5;
     int coins = 0;
@@ -45,24 +49,26 @@ public:
 
   std::size_t stageWidthCells() const
   {
-    return stage_.width();
+    return static_cast<std::size_t>(level_.width());
   }
   std::size_t stageHeightCells() const
   {
-    return stage_.height();
+    return static_cast<std::size_t>(level_.height());
   }
   Position playerPosition() const
   {
-    return player_.position();
+    return player_.body().occupiedCell(level_.tileSize());
   }
   float playerPixelX() const
   {
-    return playerPixelX_;
+    return player_.worldPosition().x;
   }
   float playerPixelY() const
   {
-    return playerPixelY_;
+    return player_.worldPosition().y;
   }
+  WorldRect playerBounds() const { return player_.worldBounds(); }
+  const LevelDefinition& level() const { return level_; }
   Direction playerDirection() const
   {
     return player_.direction();
@@ -78,13 +84,20 @@ public:
   bool isLevelComplete() const { return levelComplete_; }
   const std::vector<Position>& coins() const { return coins_; }
   const std::optional<Position>& levelExit() const { return levelExit_; }
+  std::vector<GameEvent> takeEvents()
+  {
+    std::vector<GameEvent> result;
+    result.swap(events_);
+    return result;
+  }
   void setPlayerPosition(const Position& position)
   {
-    if (!stage_.isInside(position))
+    if (!level_.isInside(position))
     {
       return;
     }
     player_.setPosition(position);
+    playerPhysics_.spawn(player_, position);
   }
   void setPlayerPixelX(float pixelX);
   void setPlayerPixelY(float pixelY);
@@ -146,13 +159,8 @@ public:
       std::optional<Position> levelExit);
   Snapshot snapshot() const;
   void restoreSnapshot(const Snapshot& snapshot);
-  void setSolidQuery(std::function<bool(int, int)> solidQuery)
-  {
-    solidQuery_ = std::move(solidQuery);
-  }
-  void applyGravity(Player& player);
-  void applyGravity(Enemy& enemy);
-
+  void loadLevel(LevelDefinition level);
+  void resetSession();
   void update();
   const std::vector<std::shared_ptr<Enemy>>& enemies() const
   {
@@ -164,8 +172,6 @@ protected:
   void updateEnemies();
   void updatePlayerAttackState(Player& player);
   void updatePlayerDodgeState(Player& player);
-  void applyHorizontalMovement(Player& player);
-  void syncPlayerGridPosition();
   void resolvePlayerAttack();
   void resolveEnemyContact();
   void resolveCollectibles();
@@ -174,22 +180,20 @@ protected:
 
 private:
   bool isSolidAt(int gridX, int gridY) const;
-  void handlePlayerJump(Player& player);
 
 private:
   Player player_;
-  Stage stage_;
+  LevelDefinition level_;
+  PlayerPhysics playerPhysics_;
 
   constexpr static std::size_t maxEnemies_ = 10;
   std::vector<std::shared_ptr<Enemy>> enemies_;
-  std::function<bool(int, int)> solidQuery_;
-  float playerPixelX_ = 0.0f;
-  float playerPixelY_ = 0.0f;
   int playerMoveIntentX_ = 0;
   std::vector<Position> coins_;
   std::optional<Position> levelExit_;
   bool levelComplete_ = false;
   int updateTick_ = 0;
+  std::vector<GameEvent> events_;
 };
 
 #endif // GAME_CORE_ENGINE_H

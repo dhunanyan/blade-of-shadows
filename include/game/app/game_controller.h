@@ -54,17 +54,25 @@ public:
   }
   const GameSettings& settings() const { return settings_; }
   void setSettings(const GameSettings& settings);
-  void setNewGameHandler(std::function<void(bool)> handler) { newGameHandler_ = std::move(handler); }
+  void setNewGameHandler(std::function<bool(bool)> handler) { newGameHandler_ = std::move(handler); }
   void setNextLevelHandler(std::function<bool()> handler) { nextLevelHandler_ = std::move(handler); }
   void setSaveGameHandler(std::function<bool()> handler) { saveGameHandler_ = std::move(handler); }
   void setLoadGameHandler(std::function<bool()> handler) { loadGameHandler_ = std::move(handler); }
-  void setLevelEditorHandler(std::function<void()> handler) { levelEditorHandler_ = std::move(handler); }
+  void setLevelEditorHandler(std::function<bool()> handler) { levelEditorHandler_ = std::move(handler); }
   void setSaveLevelHandler(std::function<bool()> handler) { saveLevelHandler_ = std::move(handler); }
-  void setPlayEditedLevelHandler(std::function<void()> handler) { playEditedLevelHandler_ = std::move(handler); }
+  void setPlayEditedLevelHandler(std::function<bool()> handler) { playEditedLevelHandler_ = std::move(handler); }
   void setSettingsChangedHandler(std::function<void(const GameSettings&)> handler)
   {
     settingsChangedHandler_ = std::move(handler);
   }
+  void setMusicNavigationHandlers(
+      std::function<void()> previousHandler,
+      std::function<void()> nextHandler)
+  {
+    previousMusicHandler_ = std::move(previousHandler);
+    nextMusicHandler_ = std::move(nextHandler);
+  }
+  void setCurrentMusicTrack(std::string trackName);
 
   void onKeyEvent(int key, bool isPressed, bool isAutoRepeat);
   void onMenuHover(int hoveredIndex);
@@ -95,14 +103,17 @@ private:
   GameMode modeBeforePause_ = GameMode::Playing;
   bool shouldQuit_ = false;
   GameSettings settings_;
-  std::function<void(bool)> newGameHandler_;
+  std::function<bool(bool)> newGameHandler_;
   std::function<bool()> nextLevelHandler_;
   std::function<bool()> saveGameHandler_;
   std::function<bool()> loadGameHandler_;
-  std::function<void()> levelEditorHandler_;
+  std::function<bool()> levelEditorHandler_;
   std::function<bool()> saveLevelHandler_;
-  std::function<void()> playEditedLevelHandler_;
+  std::function<bool()> playEditedLevelHandler_;
   std::function<void(const GameSettings&)> settingsChangedHandler_;
+  std::function<void()> previousMusicHandler_;
+  std::function<void()> nextMusicHandler_;
+  std::string currentMusicTrack_ = "No Track";
 };
 
 #endif // GAME_APP_GAME_CONTROLLER_H

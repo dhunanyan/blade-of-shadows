@@ -1,50 +1,120 @@
+#include "game/core/engine.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include "game/core/engine.h"
-#include "game/core/player.h"
-#include "game/core/stage.h"
 #include "game/core/enemy.h"
 
 namespace
 {
-inline auto signum(int x)
-{
-  return (x > 0) - (x < 0);
-}
+constexpr int maxAirJumps = 1;
 
-std::size_t defaultLaneY(int height)
+int signum(int value)
 {
-  return static_cast<std::size_t>(height / 2);
+  return (value > 0) - (value < 0);
 }
 } // namespace
 
-
 Position generateNewEnemyPosition(int width, int height)
 {
-  const auto yLane = defaultLaneY(height);
-  const auto xEdge = (rand() % 2 == 0) ? 0 : static_cast<std::size_t>(width - 1);
+  const int yLane = height / 2;
+  const int xEdge = (rand() % 2 == 0) ? 0 : width - 1;
   return Position(xEdge, yLane);
 }
 
+Engine::Engine(std::size_t stageWidth, std::size_t stageHeight)
+    : level_(
+          static_cast<int>(std::max<std::size_t>(1, stageWidth)),
+          static_cast<int>(std::max<std::size_t>(1, stageHeight)),
+          24),
+      playerPhysics_(level_)
+{
+  const Position initialSpawn(
+      static_cast<int>(stageWidthCells() / 2),
+      static_cast<int>(stageHeightCells() / 2));
+  level_.setPlayerSpawn(initialSpawn);
+  for (int y = initialSpawn.y() + 1; y < level_.height(); ++y)
+  {
+    for (int x = 0; x < level_.width(); ++x)
+    {
+      level_.setSolid(Position(x, y), true);
+    }
+  }
+  resetSession();
+}
 
 Engine::~Engine() = default;
 
-
-Engine::Engine(std::size_t stageWidth, std::size_t stageHeight):
-  stage_(stageWidth, stageHeight)
+void Engine::loadLevel(LevelDefinition level)
 {
-  const int middleX = static_cast<int>(stage_.width() / 2);
-  const int middleY = static_cast<int>(stage_.height() / 2);
-  player_.setPosition(Position{middleX, middleY});
-  playerPixelX_ = static_cast<float>(middleX) * 24.0f;
-  playerPixelY_ = static_cast<float>(middleY) * 24.0f;
+  level_ = std::move(level);
+  resetSession();
+}
+
+void Engine::resetSession()
+{
+  enemies_.clear();
+  enemies_.reserve(level_.enemySpawns().size());
+  for (const Position& spawn : level_.enemySpawns())
+  {
+    if (level_.isInside(spawn) && !level_.isSolid(spawn))
+    {
+      enemies_.push_back(std::make_shared<Enemy>(spawn));
+    }
+  }
+
+  coins_.clear();
+  for (const Position& coin : level_.coinSpawns())
+  {
+    if (level_.isInside(coin) && !level_.isSolid(coin))
+    {
+      coins_.push_back(coin);
+    }
+  }
+
+  levelExit_ =
+      level_.exit() && level_.isInside(*level_.exit()) && !level_.isSolid(*level_.exit())
+          ? level_.exit()
+          : std::nullopt;
+  levelComplete_ = false;
+  updateTick_ = 0;
+  playerMoveIntentX_ = 0;
+  events_.clear();
+
+  player_.resetProgress();
   player_.setDirection(Direction::RIGHT);
-  player_.setIsAlive(true);
+  player_.body().setVelocity({});
+  player_.setRemainingAirJumps(maxAirJumps);
+  player_.setAttackInProgress(false);
+  player_.setAttackHeld(false);
+  player_.setAttackRequested(false);
+  player_.setDodgeRequested(false);
+  player_.setDodgeTicks(0);
+  player_.setDodgeCooldownTicks(0);
+  player_.setJumpRequested(false);
+  player_.setJumpHeld(false);
+  player_.setJumpHoldTime(0.0f);
+  player_.setJumpApexHangTicks(0);
+
+  playerPhysics_.spawn(player_, level_.playerSpawn());
+}
+
+void Engine::resetSession(
+    Position playerSpawn,
+    const std::vector<Position>& enemySpawns,
+    const std::vector<Position>& coinSpawns,
+    std::optional<Position> levelExit)
+{
+  level_.setPlayerSpawn(playerSpawn);
+  level_.setEnemySpawns(enemySpawns);
+  level_.setCoinSpawns(coinSpawns);
+  level_.setExit(levelExit);
+  resetSession();
 }
 
 void Engine::update()
 {
+  events_.clear();
   ++updateTick_;
   if (player_.invulnerabilityTicks() > 0)
   {
@@ -54,11 +124,10 @@ void Engine::update()
   {
     player_.setDoubleJumpFxTicks(player_.doubleJumpFxTicks() - 1);
   }
+
   updatePlayerAttackState(player_);
-  handlePlayerJump(player_);
   updatePlayerDodgeState(player_);
-  applyHorizontalMovement(player_);
-  applyGravity(player_);
+  playerPhysics_.update(player_, playerMoveIntentX_, events_);
   updateEnemies();
   resolvePlayerAttack();
   resolveEnemyContact();
@@ -99,228 +168,27 @@ void Engine::updatePlayerAttackState(Player& player)
       player.setAttackTicksLeft(attackDurationTicks);
       player.setAttackDamageApplied(false);
       player.setAttackRequested(false);
+      events_.push_back(GameEvent::AttackStarted);
     }
     return;
   }
 
-  int ticksLeft = player.attackTicksLeft();
+  const int ticksLeft = std::max(0, player.attackTicksLeft() - 1);
+  player.setAttackTicksLeft(ticksLeft);
   if (ticksLeft > 0)
   {
-    --ticksLeft;
-  }
-  player.setAttackTicksLeft(ticksLeft);
-
-  if (ticksLeft <= 0)
-  {
-    if (player.attackHeld())
-    {
-      player.setAttackTicksLeft(attackDurationTicks);
-      player.setAttackDamageApplied(false);
-    }
-    else
-    {
-      player.setAttackInProgress(false);
-    }
-  }
-}
-
-void Engine::handlePlayerJump(Player& player)
-{
-  constexpr float groundJumpImpulse = -4.6f;
-  constexpr float airJumpImpulse = -3.75f;
-  constexpr float groundMaxHoldTime = 0.14f;
-  constexpr float airMaxHoldTime = 0.10f;
-  constexpr float groundHoldBoost = -0.075f;
-  constexpr float airHoldBoost = -0.06f;
-  constexpr int maxAirJumps = 1;
-  constexpr int doubleJumpFxDurationTicks = 16;
-  constexpr int jumpApexHangDurationTicks = 8; // brief apex hang
-  constexpr float tileSizePx = 24.0f;
-
-  auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
-  {
-    if (pixelY < 0.0f)
-    {
-      return false;
-    }
-    const int topCell = static_cast<int>(std::floor(pixelY / tileSizePx));
-    const int belowCellY = topCell + 1;
-    if (belowCellY >= static_cast<int>(stage_.height()))
-    {
-      return true;
-    }
-
-    const int leftCellX = static_cast<int>(std::floor(playerPixelX_ / tileSizePx));
-    const int rightCellX = static_cast<int>(std::floor((playerPixelX_ + tileSizePx - 1.0f) / tileSizePx));
-    return isSolidAt(leftCellX, belowCellY) || isSolidAt(rightCellX, belowCellY);
-  };
-
-  // Keep grounded state synchronized at jump decision time
-  player.setIsGrounded(isSolidBelowAtPixelY(playerPixelY_));
-
-  if (player.isGrounded())
-  {
-    player.setRemainingAirJumps(maxAirJumps);
+    return;
   }
 
-  if (player.jumpRequested())
+  if (player.attackHeld())
   {
-    const bool canJumpFromGround = player.isGrounded();
-    const bool canJumpInAir = !player.isGrounded() && player.remainingAirJumps() > 0;
-
-    if (canJumpFromGround || canJumpInAir)
-    {
-      const bool isGroundJump = canJumpFromGround;
-      if (canJumpInAir)
-      {
-        player.setRemainingAirJumps(player.remainingAirJumps() - 1);
-        player.setDoubleJumpFxTicks(doubleJumpFxDurationTicks);
-      }
-      player.setVelocityY(isGroundJump ? groundJumpImpulse : airJumpImpulse);
-      player.setIsGrounded(false);
-      player.setJumpHoldTime(0.0f);
-      player.setJumpApexHangTicks(jumpApexHangDurationTicks);
-    }
-  }
-  player.setJumpRequested(false);
-
-  const bool boostingGroundJump = player.remainingAirJumps() == maxAirJumps;
-  const float maxHoldTime = boostingGroundJump ? groundMaxHoldTime : airMaxHoldTime;
-  const float holdBoost = boostingGroundJump ? groundHoldBoost : airHoldBoost;
-
-  if (
-    !player.isGrounded() && 
-    player.jumpHeld() && 
-    player.velocityY() < 0.0f &&
-    player.jumpHoldTime() < maxHoldTime
-  )
-  {
-    player.setVelocityY(player.velocityY() + holdBoost);
-    player.setJumpHoldTime(player.jumpHoldTime() + (1.0f / 60.0f));
-  }
-
-  if (!player.jumpHeld() && player.velocityY() < -1.2f) {
-    player.setVelocityY(-1.2f);
-  }
-}
-
-void Engine::applyGravity(Player& player)
-{
-  constexpr float tileSizePx = 24.0f;
-  constexpr float gravityUp = 0.19f;
-  constexpr float gravityDown = 0.42f;
-  constexpr float maxFallSpeed = 3.10f;
-  constexpr float apexVelocityThreshold = 0.22f;
-
-  auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
-  {
-    if (pixelY < 0.0f)
-    {
-      return false;
-    }
-    const int topCell = static_cast<int>(std::floor(pixelY / tileSizePx));
-    const int belowCellY = topCell + 1;
-    if (belowCellY >= static_cast<int>(stage_.height()))
-    {
-      return true;
-    }
-
-    const int leftCellX = static_cast<int>(std::floor(playerPixelX_ / tileSizePx));
-    const int rightCellX = static_cast<int>(std::floor((playerPixelX_ + tileSizePx - 1.0f) / tileSizePx));
-    return isSolidAt(leftCellX, belowCellY) || isSolidAt(rightCellX, belowCellY);
-  };
-  auto isSolidAboveAtPixelY = [&](float pixelY) -> bool
-  {
-    if (pixelY < 0.0f)
-    {
-      return true;
-    }
-    const int topCellY = static_cast<int>(std::floor(pixelY / tileSizePx));
-    const int leftCellX = static_cast<int>(std::floor(playerPixelX_ / tileSizePx));
-    const int rightCellX = static_cast<int>(std::floor((playerPixelX_ + tileSizePx - 1.0f) / tileSizePx));
-    return isSolidAt(leftCellX, topCellY) || isSolidAt(rightCellX, topCellY);
-  };
-
-  player.setIsGrounded(isSolidBelowAtPixelY(playerPixelY_));
-
-  if (player.isGrounded())
-  {
-    player.setVelocityY(0.0f);
-    player.setJumpHoldTime(0.0f);
-    player.setJumpApexHangTicks(0);
-    playerPixelY_ = std::floor(playerPixelY_ / tileSizePx) * tileSizePx;
+    player.setAttackTicksLeft(attackDurationTicks);
+    player.setAttackDamageApplied(false);
+    events_.push_back(GameEvent::AttackStarted);
   }
   else
   {
-    if (std::abs(player.velocityY()) <= apexVelocityThreshold && player.jumpApexHangTicks() > 0)
-    {
-      player.setVelocityY(0.0f);
-      player.setJumpApexHangTicks(player.jumpApexHangTicks() - 1);
-      syncPlayerGridPosition();
-      return;
-    }
-
-    const float gravity = (player.velocityY() < 0.0f) ? gravityUp : gravityDown;
-    float vy = player.velocityY() + gravity;
-    if (vy > maxFallSpeed)
-    {
-      vy = maxFallSpeed;
-    }
-    if (std::abs(vy) < 0.05f)
-    {
-      vy = 0.0f;
-    }
-    player.setVelocityY(vy);
-
-    float remaining = player.velocityY();
-    if (remaining > 0.0f)
-    {
-      while (remaining > 0.0f)
-      {
-        const float step = std::min(1.0f, remaining);
-        const float candidateY = playerPixelY_ + step;
-        if (isSolidBelowAtPixelY(candidateY))
-        {
-          player.setIsGrounded(true);
-          player.setVelocityY(0.0f);
-          break;
-        }
-
-        playerPixelY_ = candidateY;
-        player.setIsGrounded(false);
-        remaining -= step;
-      }
-    } else if (remaining < 0.0f)
-    {
-      while (remaining < 0.0f) {
-        const float step = std::max(-1.0f, remaining);
-        const float candidateY = playerPixelY_ + step;
-
-        if (isSolidAboveAtPixelY(candidateY))
-        {
-          player.setVelocityY(0.0f);
-          break;
-        }
-
-        playerPixelY_ = candidateY;
-        remaining -= step; // step is negative
-      }
-    }
-  }
-
-  syncPlayerGridPosition();
-}
-
-void Engine::applyGravity(Enemy& enemy)
-{
-  if (!enemy.isGrounded())
-  {
-    const float gravity = 0.056f;
-    const float maxFallSpeed = 0.48f;
-
-    float vy = enemy.velocityY() + gravity;
-    if (vy > maxFallSpeed) vy = maxFallSpeed;
-    enemy.setVelocityY(vy);
+    player.setAttackInProgress(false);
   }
 }
 
@@ -328,12 +196,12 @@ void Engine::updateEnemies()
 {
   enemies_.erase(
       std::remove_if(
-          enemies_.begin(), enemies_.end(),
+          enemies_.begin(),
+          enemies_.end(),
           [](const std::shared_ptr<Enemy>& enemy)
-          { 
+          {
             return !enemy || !enemy->isAlive();
-          }
-      ),
+          }),
       enemies_.end());
 
   if (updateTick_ % 12 != 0)
@@ -341,82 +209,164 @@ void Engine::updateEnemies()
     return;
   }
 
-  const Position playerPos = player_.position();
+  const Position playerCell = playerPosition();
   for (const auto& enemy : enemies_)
   {
-    if (!enemy)
-    {
-      continue;
-    }
-
-    const int dx = signum(static_cast<int>(playerPos.x()) - static_cast<int>(enemy->position().x()));
-    Position candidate = enemy->position();
-    if (dx > 0 && candidate.x() + 1 < stage_.width())
-    {
-      candidate = Position(candidate.x() + 1, candidate.y());
-    }
-    else if (dx < 0 && candidate.x() > 0)
-    {
-      candidate = Position(candidate.x() - 1, candidate.y());
-    }
-
-    if (canEnemyOccupy(candidate))
+    const int dx = signum(playerCell.x() - enemy->position().x());
+    const Position candidate(enemy->position().x() + dx, enemy->position().y());
+    if (dx != 0 && canEnemyOccupy(candidate))
     {
       enemy->setPosition(candidate);
     }
   }
 }
 
-void Engine::resetSession(
-    Position playerSpawn,
-    const std::vector<Position>& enemySpawns,
-    const std::vector<Position>& coinSpawns,
-    std::optional<Position> levelExit)
+void Engine::resolvePlayerAttack()
 {
-  enemies_.clear();
-  enemies_.reserve(enemySpawns.size());
-  for (const Position& spawn : enemySpawns)
+  if (!player_.attackInProgress() || player_.attackDamageApplied())
   {
-    if (stage_.isInside(spawn))
-    {
-      enemies_.push_back(std::make_shared<Enemy>(spawn));
-    }
+    return;
   }
 
-  coins_.clear();
-  for (const Position& coin : coinSpawns)
+  constexpr int attackHitTick = 12;
+  constexpr float attackDamage = 50.0f;
+  if (player_.attackTicksLeft() > attackHitTick)
   {
-    if (stage_.isInside(coin))
-    {
-      coins_.push_back(coin);
-    }
+    return;
   }
 
-  levelExit_ = levelExit;
-  levelComplete_ = false;
-  updateTick_ = 0;
-  player_.resetProgress();
-  player_.setPosition(playerSpawn);
-  player_.setDirection(Direction::RIGHT);
-  player_.setVelocityY(0.0f);
-  player_.setIsGrounded(false);
-  player_.setRemainingAirJumps(1);
-  player_.setAttackInProgress(false);
-  player_.setAttackHeld(false);
-  player_.setAttackRequested(false);
-  player_.setDodgeRequested(false);
-  player_.setDodgeTicks(0);
-  player_.setDodgeCooldownTicks(0);
-  playerPixelX_ = static_cast<float>(playerSpawn.x()) * 24.0f;
-  playerPixelY_ = static_cast<float>(playerSpawn.y()) * 24.0f;
-  playerMoveIntentX_ = 0;
+  const Position playerCell = playerPosition();
+  const int direction = player_.direction() == Direction::LEFT ? -1 : 1;
+  for (const auto& enemy : enemies_)
+  {
+    if (!enemy || !enemy->isAlive())
+    {
+      continue;
+    }
+    const int forwardDistance = (enemy->position().x() - playerCell.x()) * direction;
+    if (forwardDistance >= 0 &&
+        forwardDistance <= 2 &&
+        std::abs(enemy->position().y() - playerCell.y()) <= 1)
+    {
+      const bool wasAlive = enemy->isAlive();
+      enemy->decreaseLife(attackDamage);
+      if (wasAlive && !enemy->isAlive())
+      {
+        player_.addScore(100);
+      }
+    }
+  }
+  player_.setAttackDamageApplied(true);
+}
+
+void Engine::resolveEnemyContact()
+{
+  if (!player_.isAlive() || player_.invulnerabilityTicks() > 0 || player_.isDodging())
+  {
+    return;
+  }
+
+  const WorldRect playerBounds = player_.worldBounds();
+  for (const auto& enemy : enemies_)
+  {
+    if (!enemy || !enemy->isAlive())
+    {
+      continue;
+    }
+    if (playerBounds.intersects(level_.cellBounds(enemy->position())))
+    {
+      const int healthBeforeDamage = player_.health();
+      player_.takeDamage(enemy->contactDamage());
+      player_.setInvulnerabilityTicks(60);
+      if (player_.health() < healthBeforeDamage)
+      {
+        events_.push_back(GameEvent::PlayerDamaged);
+        if (!player_.isAlive())
+        {
+          events_.push_back(GameEvent::PlayerDefeated);
+        }
+      }
+      break;
+    }
+  }
+}
+
+void Engine::resolveCollectibles()
+{
+  const Position playerCell = playerPosition();
+  const auto oldSize = coins_.size();
+  coins_.erase(
+      std::remove(coins_.begin(), coins_.end(), playerCell),
+      coins_.end());
+
+  const int collected = static_cast<int>(oldSize - coins_.size());
+  if (collected > 0)
+  {
+    player_.addCoin(collected);
+    player_.addScore(collected * 10);
+    events_.push_back(GameEvent::CoinCollected);
+  }
+}
+
+void Engine::resolveLevelExit()
+{
+  const bool completed =
+      levelExit_ &&
+      coins_.empty() &&
+      playerPosition() == *levelExit_;
+  if (completed && !levelComplete_)
+  {
+    events_.push_back(GameEvent::LevelCompleted);
+  }
+  levelComplete_ = completed;
+}
+
+bool Engine::canEnemyOccupy(const Position& position) const
+{
+  return level_.isInside(position) &&
+         !level_.isSolid(position) &&
+         (position.y() + 1 >= level_.height() ||
+          level_.isSolid(position.x(), position.y() + 1));
+}
+
+bool Engine::isSolidAt(int gridX, int gridY) const
+{
+  return level_.isSolid(gridX, gridY);
+}
+
+bool Engine::willPlayerTouchGroundSoon(float lookAheadPx) const
+{
+  return playerPhysics_.willTouchGroundSoon(player_, lookAheadPx);
+}
+
+void Engine::setPlayerPixelX(float pixelX)
+{
+  WorldPoint position = player_.worldPosition();
+  const float maxX = std::max(
+      0.0f,
+      level_.width() * static_cast<float>(level_.tileSize()) - player_.body().size().width);
+  position.x = std::clamp(pixelX, 0.0f, maxX);
+  playerPhysics_.setWorldPosition(player_, position);
+}
+
+void Engine::setPlayerPixelY(float pixelY)
+{
+  WorldPoint position = player_.worldPosition();
+  const float maxY = std::max(
+      0.0f,
+      level_.height() * static_cast<float>(level_.tileSize()) - player_.body().size().height);
+  position.y = std::clamp(pixelY, 0.0f, maxY);
+  playerPhysics_.setWorldPosition(player_, position);
 }
 
 Engine::Snapshot Engine::snapshot() const
 {
   Snapshot state;
-  state.playerPixelX = playerPixelX_;
-  state.playerPixelY = playerPixelY_;
+  state.playerPixelX = player_.worldPosition().x;
+  state.playerPixelY = player_.worldPosition().y;
+  state.playerVelocityY = player_.velocityY();
+  state.playerDirection = player_.direction();
+  state.remainingAirJumps = player_.remainingAirJumps();
   state.playerHealth = player_.health();
   state.playerMaxHealth = player_.maxHealth();
   state.coins = player_.coins();
@@ -443,275 +393,53 @@ void Engine::restoreSnapshot(const Snapshot& state)
   player_.setHealth(state.playerHealth);
   player_.setCoins(state.coins);
   player_.setScore(state.score);
-  coins_ = state.remainingCoins;
+  coins_.clear();
+  for (const Position& coin : state.remainingCoins)
+  {
+    if (level_.isInside(coin) && !level_.isSolid(coin))
+    {
+      coins_.push_back(coin);
+    }
+  }
+
   enemies_.clear();
-  enemies_.reserve(state.enemies.size());
   for (const Snapshot::EnemyState& enemyState : state.enemies)
   {
+    if (!level_.isInside(enemyState.position) || level_.isSolid(enemyState.position))
+    {
+      continue;
+    }
     auto enemy = std::make_shared<Enemy>(enemyState.position, enemyState.maxLife);
     enemy->decreaseLife(enemyState.maxLife - enemyState.life);
     enemies_.push_back(std::move(enemy));
   }
-  levelComplete_ = state.levelComplete;
-  setPlayerPixelX(state.playerPixelX);
-  setPlayerPixelY(state.playerPixelY);
-  player_.setVelocityY(0.0f);
-  player_.setIsGrounded(false);
-}
 
-void Engine::resolvePlayerAttack()
-{
-  if (!player_.attackInProgress() || player_.attackDamageApplied())
+  WorldPoint restored{state.playerPixelX, state.playerPixelY};
+  const WorldRect restoredBounds{restored, player_.body().size()};
+  if (!playerPhysics_.canOccupy(restoredBounds))
   {
-    return;
-  }
-
-  constexpr int attackHitTick = 12;
-  constexpr float attackDamage = 50.0f;
-  if (player_.attackTicksLeft() > attackHitTick)
-  {
-    return;
-  }
-
-  const int playerX = static_cast<int>(player_.position().x());
-  const int playerY = static_cast<int>(player_.position().y());
-  const int direction = player_.direction() == Direction::LEFT ? -1 : 1;
-
-  for (const auto& enemy : enemies_)
-  {
-    if (!enemy || !enemy->isAlive())
-    {
-      continue;
-    }
-    const int enemyX = static_cast<int>(enemy->position().x());
-    const int enemyY = static_cast<int>(enemy->position().y());
-    const int forwardDistance = (enemyX - playerX) * direction;
-    if (forwardDistance >= 0 && forwardDistance <= 2 && std::abs(enemyY - playerY) <= 1)
-    {
-      const bool wasAlive = enemy->isAlive();
-      enemy->decreaseLife(attackDamage);
-      if (wasAlive && !enemy->isAlive())
-      {
-        player_.addScore(100);
-      }
-    }
-  }
-  player_.setAttackDamageApplied(true);
-}
-
-void Engine::resolveEnemyContact()
-{
-  if (!player_.isAlive() || player_.invulnerabilityTicks() > 0 || player_.isDodging())
-  {
-    return;
-  }
-
-  for (const auto& enemy : enemies_)
-  {
-    if (!enemy || !enemy->isAlive())
-    {
-      continue;
-    }
-    const int dx = std::abs(static_cast<int>(enemy->position().x()) - static_cast<int>(player_.position().x()));
-    const int dy = std::abs(static_cast<int>(enemy->position().y()) - static_cast<int>(player_.position().y()));
-    if (dx <= 1 && dy <= 1)
-    {
-      player_.takeDamage(enemy->contactDamage());
-      player_.setInvulnerabilityTicks(60);
-      break;
-    }
-  }
-}
-
-void Engine::resolveCollectibles()
-{
-  const Position playerPosition = player_.position();
-  const auto oldSize = coins_.size();
-  coins_.erase(
-      std::remove_if(
-          coins_.begin(),
-          coins_.end(),
-          [&](const Position& coin)
-          {
-            return coin.x() == playerPosition.x() && coin.y() == playerPosition.y();
-          }),
-      coins_.end());
-
-  const int collected = static_cast<int>(oldSize - coins_.size());
-  if (collected > 0)
-  {
-    player_.addCoin(collected);
-    player_.addScore(collected * 10);
-  }
-}
-
-void Engine::resolveLevelExit()
-{
-  if (!levelExit_ || !coins_.empty())
-  {
-    return;
-  }
-
-  const Position playerPosition = player_.position();
-  levelComplete_ =
-      playerPosition.x() == levelExit_->x() &&
-      playerPosition.y() == levelExit_->y();
-}
-
-bool Engine::canEnemyOccupy(const Position& position) const
-{
-  if (!stage_.isInside(position))
-  {
-    return false;
-  }
-  const int x = static_cast<int>(position.x());
-  const int y = static_cast<int>(position.y());
-  return !isSolidAt(x, y) &&
-         (y + 1 >= static_cast<int>(stage_.height()) || isSolidAt(x, y + 1));
-}
-
-bool Engine::isSolidAt(int gridX, int gridY) const
-{
-  if (!solidQuery_) return false;
-  return solidQuery_(gridX, gridY);
-}
-
-bool Engine::willPlayerTouchGroundSoon(float lookAheadPx) const
-{
-  constexpr float tileSizePx = 24.0f;
-  const float safeLookAheadPx = std::max(0.0f, lookAheadPx);
-
-  auto isSolidBelowAtPixelY = [&](float pixelY) -> bool
-  {
-    if (pixelY < 0.0f)
-    {
-      return false;
-    }
-
-    const int topCell = static_cast<int>(std::floor(pixelY / tileSizePx));
-    const int belowCellY = topCell + 1;
-    if (belowCellY >= static_cast<int>(stage_.height()))
-    {
-      return true;
-    }
-
-    const int leftCellX = static_cast<int>(std::floor(playerPixelX_ / tileSizePx));
-    const int rightCellX = static_cast<int>(std::floor((playerPixelX_ + tileSizePx - 1.0f) / tileSizePx));
-    return isSolidAt(leftCellX, belowCellY) || isSolidAt(rightCellX, belowCellY);
-  };
-
-  return isSolidBelowAtPixelY(playerPixelY_ + safeLookAheadPx);
-}
-
-void Engine::applyHorizontalMovement(Player& player)
-{
-  constexpr float tileSizePx = 24.0f;
-  constexpr float playerMoveStepPx = 2.35f;
-  constexpr float playerDodgeStepPx = 5.0f;
-
-  int movementIntent = playerMoveIntentX_;
-  if (player.isDodging() && movementIntent == 0)
-  {
-    movementIntent = player.direction() == Direction::LEFT ? -1 : 1;
-  }
-
-  if (movementIntent == 0)
-  {
-    syncPlayerGridPosition();
-    return;
-  }
-
-  if (movementIntent < 0)
-  {
-    player.setDirection(Direction::LEFT);
+    playerPhysics_.spawn(player_, level_.playerSpawn());
   }
   else
   {
-    player.setDirection(Direction::RIGHT);
+    playerPhysics_.setWorldPosition(player_, restored);
   }
-
-  auto canOccupyAtPixel = [&](float leftX, float topY) -> bool
-  {
-    const float rightX = leftX + tileSizePx - 1.0f;
-    const float bottomY = topY + tileSizePx - 1.0f;
-    const float levelWidthPx = static_cast<float>(stage_.width()) * tileSizePx;
-    const float levelHeightPx = static_cast<float>(stage_.height()) * tileSizePx;
-
-    if (leftX < 0.0f || rightX >= levelWidthPx || topY < 0.0f || bottomY >= levelHeightPx)
-    {
-      return false;
-    }
-
-    const int leftCell = static_cast<int>(std::floor(leftX / tileSizePx));
-    const int rightCell = static_cast<int>(std::floor(rightX / tileSizePx));
-    const int topCell = static_cast<int>(std::floor(topY / tileSizePx));
-    const int bottomCell = static_cast<int>(std::floor(bottomY / tileSizePx));
-
-    return !isSolidAt(leftCell, topCell) &&
-           !isSolidAt(rightCell, topCell) &&
-           !isSolidAt(leftCell, bottomCell) &&
-           !isSolidAt(rightCell, bottomCell);
-  };
-
-  const float moveStep = player.isDodging() ? playerDodgeStepPx : playerMoveStepPx;
-  const float desiredMove = moveStep * static_cast<float>(movementIntent);
-  float remaining = std::abs(desiredMove);
-  const float sign = (desiredMove < 0.0f) ? -1.0f : 1.0f;
-
-  while (remaining > 0.0f)
-  {
-    const float step = std::min(1.0f, remaining) * sign;
-    const float candidateX = playerPixelX_ + step;
-    if (!canOccupyAtPixel(candidateX, playerPixelY_))
-    {
-      break;
-    }
-
-    playerPixelX_ = candidateX;
-    remaining -= std::abs(step);
-  }
-
-  syncPlayerGridPosition();
+  player_.setDirection(state.playerDirection);
+  player_.setVelocityY(state.playerVelocityY);
+  player_.setRemainingAirJumps(std::clamp(state.remainingAirJumps, 0, maxAirJumps));
+  player_.setIsGrounded(playerPhysics_.isGrounded(player_.body()));
+  levelComplete_ = state.levelComplete && coins_.empty();
 }
 
-void Engine::setPlayerPixelX(float pixelX)
-{
-  const float maxX = std::max(0.0f, static_cast<float>(stage_.width() * 24) - 24.0f);
-  playerPixelX_ = std::clamp(pixelX, 0.0f, maxX);
-  syncPlayerGridPosition();
-}
-
-void Engine::setPlayerPixelY(float pixelY)
-{
-  const float maxY = std::max(0.0f, static_cast<float>(stage_.height() * 24) - 24.0f);
-  playerPixelY_ = std::clamp(pixelY, 0.0f, maxY);
-  syncPlayerGridPosition();
-}
-
-void Engine::syncPlayerGridPosition()
-{
-  constexpr float tileSizePx = 24.0f;
-
-  const int maxGridX = static_cast<int>(stage_.width()) - 1;
-  const int maxGridY = static_cast<int>(stage_.height()) - 1;
-
-  const float centerX = playerPixelX_ + tileSizePx * 0.5f;
-  int gridX = static_cast<int>(std::floor(centerX / tileSizePx));
-  int gridY = static_cast<int>(std::floor(playerPixelY_ / tileSizePx));
-
-  if (gridX < 0) gridX = 0;
-  if (gridX > maxGridX) gridX = maxGridX;
-  if (gridY < 0) gridY = 0;
-  if (gridY > maxGridY) gridY = maxGridY;
-
-  player_.setPosition(Position(gridX, gridY));
-}
-
-void Engine::randEnemies(Position (*positionGenerator)(int,int))
+void Engine::randEnemies(Position (*positionGenerator)(int, int))
 {
   while (enemies_.size() < maxEnemies_)
   {
-    const Position enemyPosition = positionGenerator(static_cast<int>(stageWidthCells()), static_cast<int>(stageHeightCells()));
-    enemies_.push_back(std::make_shared<Enemy>(enemyPosition));
+    const Position position =
+        positionGenerator(level_.width(), level_.height());
+    if (level_.isInside(position))
+    {
+      enemies_.push_back(std::make_shared<Enemy>(position));
+    }
   }
 }
